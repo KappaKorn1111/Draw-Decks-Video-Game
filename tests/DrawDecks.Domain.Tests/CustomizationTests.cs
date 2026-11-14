@@ -125,6 +125,42 @@ public sealed class CustomizationTests
     }
 
     [Fact]
+    public void ConfiguredMatchFactoryBuildsTeamBattleAndSurvivalFromPresets()
+    {
+        var catalog = Catalog();
+        var ids = catalog.Definitions.Where(card => card.Id.StartsWith("standard-", System.StringComparison.Ordinal))
+            .Take(20).Select(card => card.Id).ToArray();
+        var deck = new DeckProfile("mode-deck", "Mode Deck", catalog.Version, ids);
+
+        var teamSeats = new[]
+        {
+            new SeatDefinition("h1", "Human 1", SeatKind.Human),
+            new SeatDefinition("c1", "CPU 1", SeatKind.Cpu),
+            new SeatDefinition("h2", "Human 2", SeatKind.Human),
+            new SeatDefinition("c2", "CPU 2", SeatKind.Cpu)
+        };
+        var teamRules = RulesetPresets.All.Single(item => item.Mode == GameMode.TeamBattle);
+        var teamMatch = ConfiguredMatchFactory.Create("team-match", 21, teamSeats, catalog, deck, teamRules);
+        Assert.True(teamMatch.Success, string.Join(" | ", teamMatch.Errors));
+        Assert.Equal(GameMode.TeamBattle, teamMatch.Match!.Rules.Mode);
+        Assert.Equal("team-a", teamMatch.Match.Players[0].TeamId);
+        Assert.Equal("team-b", teamMatch.Match.Players[1].TeamId);
+
+        var survivalSeats = new[]
+        {
+            new SeatDefinition("survivor", "Survivor", SeatKind.Human),
+            new SeatDefinition("cpu1", "CPU 1", SeatKind.Cpu),
+            new SeatDefinition("cpu2", "CPU 2", SeatKind.Cpu),
+            new SeatDefinition("cpu3", "CPU 3", SeatKind.Cpu)
+        };
+        var survivalRules = RulesetPresets.All.Single(item => item.Mode == GameMode.Survival);
+        var survivalMatch = ConfiguredMatchFactory.Create("survival-match", 22, survivalSeats, catalog, deck, survivalRules);
+        Assert.True(survivalMatch.Success, string.Join(" | ", survivalMatch.Errors));
+        Assert.Equal(GameMode.Survival, survivalMatch.Match!.Rules.Mode);
+        Assert.Equal(1, survivalMatch.Match.SurvivalWave);
+    }
+
+    [Fact]
     public void ConfiguredMatchFactoryCreatesEliminationMatchWithHealthEnabled()
     {
         var catalog = Catalog();
