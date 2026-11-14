@@ -56,9 +56,19 @@ public static class MatchReplay
             right.ConsecutiveNonScoringTurns.TryGetValue(pair.Key, out var count) && count == pair.Value);
     }
 
+    private static bool RulesEqual(Ruleset left, Ruleset right)
+    {
+        return left.StartingHandSize == right.StartingHandSize &&
+               left.MaximumHandSize == right.MaximumHandSize &&
+               left.MaximumPlayers == right.MaximumPlayers &&
+               left.AllowStacking == right.AllowStacking &&
+               left.TargetScore == right.TargetScore &&
+               left.MaximumTurns == right.MaximumTurns;
+    }
+
     public static bool AreEquivalent(MatchState left, MatchState right)
     {
-        if (left.MatchId != right.MatchId || left.Seed != right.Seed || left.CatalogVersion != right.CatalogVersion || left.Status != right.Status || left.WinnerPlayerId != right.WinnerPlayerId ||
+        if (!RulesEqual(left.Rules,right.Rules) || left.MatchId != right.MatchId || left.Seed != right.Seed || left.CatalogVersion != right.CatalogVersion || left.Status != right.Status || left.WinnerPlayerId != right.WinnerPlayerId ||
             left.CurrentPlayer.Id != right.CurrentPlayer.Id || left.TurnNumber != right.TurnNumber ||
             left.DrawPileCount != right.DrawPileCount || left.ActiveSuit != right.ActiveSuit || left.RandomState != right.RandomState || left.Direction != right.Direction || left.DoubleScoreActive != right.DoubleScoreActive || left.BlockedDrawPlayerId != right.BlockedDrawPlayerId || !left.PendingSkipPlayerIds.SetEquals(right.PendingSkipPlayerIds) || left.Events.Count != right.Events.Count || left.TurnHadScoringAction != right.TurnHadScoringAction || !NonScoringCountsEqual(left,right))
             return false;
