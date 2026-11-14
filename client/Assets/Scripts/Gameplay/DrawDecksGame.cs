@@ -52,13 +52,21 @@ namespace DrawDecks.Client.Gameplay
         private readonly string[] defaultNames = { "Player 1", "Player 2", "Player 3", "Player 4" };
         private readonly string[] slotNames = { "Player 1", "Player 2", "Player 3", "Player 4" };
         private readonly SeatKind[] slotKinds = { SeatKind.Human, SeatKind.Cpu, SeatKind.Cpu, SeatKind.Cpu };
+        private readonly CpuDifficulty[] slotDifficulties = { CpuDifficulty.Normal, CpuDifficulty.Normal, CpuDifficulty.Normal, CpuDifficulty.Normal };
         private readonly InputField[] nameInputs = new InputField[MaxSeats];
         private readonly Text[] kindLabels = new Text[MaxSeats];
+        private readonly Text[] difficultyLabels = new Text[MaxSeats];
         private readonly Transform[] setupSeatRows = new Transform[MaxSeats];
+        private readonly Dictionary<string, CpuDifficulty> cpuDifficulties = new Dictionary<string, CpuDifficulty>(StringComparer.Ordinal);
+        private readonly CpuDifficulty[] lastCpuDifficulties = { CpuDifficulty.Normal, CpuDifficulty.Normal, CpuDifficulty.Normal, CpuDifficulty.Normal };
+        private int cpuDelayIndex = 1;
+        private int cpuBudgetIndex = 1;
         private Text playerCountLabel;
         private Text rulesetLabel;
         private Text deckLabel;
         private Text timerChoiceLabel;
+        private Text cpuDelayLabel;
+        private Text cpuBudgetLabel;
 
         private SeatDefinition[] lastSeats;
         private Ruleset lastRules;
@@ -456,10 +464,23 @@ namespace DrawDecks.Client.Gameplay
                 CreateText(row, "SEAT " + (i + 1), 16, TextMuted, TextAnchor.MiddleCenter, 54f,
                     sizeDelta: new Vector2(110f, 54f));
                 nameInputs[i] = CreateInput(row, slotNames[i], 360f);
-                var kindButton = CreateButton(row, KindDisplay(slotKinds[i]), () => CycleSeatKind(seatIndex), 54f, 190f,
+                var kindButton = CreateButton(row, KindDisplay(slotKinds[i]), () => CycleSeatKind(seatIndex), 54f, 150f,
                     slotKinds[i] == SeatKind.Human ? AccentDim : PanelRaised);
                 kindLabels[i] = kindButton.GetComponentInChildren<Text>();
+                var difficultyButton = CreateButton(row, DifficultyDisplay(slotKinds[i], slotDifficulties[i]),
+                    () => CycleSeatDifficulty(seatIndex), 54f, 180f, PanelRaised);
+                difficultyLabels[i] = difficultyButton.GetComponentInChildren<Text>();
+                difficultyButton.interactable = slotKinds[i] == SeatKind.Cpu;
             }
+
+            var aiSettingsRow = CreateRow(pageBody, 56f);
+            cpuDelayLabel = CreateButton(aiSettingsRow, CpuDelayDisplay(), CycleCpuDelay, 54f)
+                .GetComponentInChildren<Text>();
+            cpuBudgetLabel = CreateButton(aiSettingsRow, CpuBudgetDisplay(), CycleCpuBudget, 54f)
+                .GetComponentInChildren<Text>();
+
+            CreateText(pageBody, "CPU DIFFICULTY: Easy / Normal / Hard / Expert per seat. Thinking delay and evaluation budget are configurable.", 
+                14, TextMuted, TextAnchor.MiddleCenter, 34f);
 
             CreateText(pageBody, "Rulesets: Classic (100 points), Quick Match (50), Marathon (150). " +
                 "Deck presets: Confluence Standard (52 standard + 13 effect cards) or Classic 52. " +
@@ -514,10 +535,49 @@ namespace DrawDecks.Client.Gameplay
             return kind == SeatKind.Human ? "HUMAN" : "CPU";
         }
 
+        private static string DifficultyDisplay(SeatKind kind, CpuDifficulty difficulty)
+        {
+            return kind == SeatKind.Cpu ? "AI: " + difficulty.ToString().ToUpperInvariant() : "AI: —";
+        }
+
+        private string CpuDelayDisplay()
+        {
+            return new[] { "CPU DELAY: FAST", "CPU DELAY: STANDARD", "CPU DELAY: SLOW" }[cpuDelayIndex % 3];
+        }
+
+        private string CpuBudgetDisplay()
+        {
+            return new[] { "AI BUDGET: FAST", "AI BUDGET: BALANCED", "AI BUDGET: DEEP" }[cpuBudgetIndex % 3];
+        }
+
+        private void CycleCpuDelay()
+        {
+            cpuDelayIndex = (cpuDelayIndex + 1) % 3;
+            if (cpuDelayLabel != null) cpuDelayLabel.text = CpuDelayDisplay();
+        }
+
+        private void CycleCpuBudget()
+        {
+            cpuBudgetIndex = (cpuBudgetIndex + 1) % 3;
+            if (cpuBudgetLabel != null) cpuBudgetLabel.text = CpuBudgetDisplay();
+        }
+
+        private void CycleSeatDifficulty(int index)
+        {
+            if (slotKinds[index] != SeatKind.Cpu) return;
+            slotDifficulties[index] = (CpuDifficulty)(((int)slotDifficulties[index] + 1) % 4);
+            if (difficultyLabels[index] != null)
+                difficultyLabels[index].text = DifficultyDisplay(slotKinds[index], slotDifficulties[index]);
+        }
+
         private void CycleSeatKind(int index)
         {
             slotKinds[index] = slotKinds[index] == SeatKind.Human ? SeatKind.Cpu : SeatKind.Human;
             if (kindLabels[index] != null) kindLabels[index].text = KindDisplay(slotKinds[index]);
+            if (difficultyLabels[index] != null)
+                difficultyLabels[index].text = DifficultyDisplay(slotKinds[index], slotDifficulties[index]);
+            var row = difficultyLabels[index] == null ? null : difficultyLabels[index].GetComponentInParent<Button>();
+            if (row != null) row.interactable = slotKinds[index] == SeatKind.Cpu;
         }
 
         private Ruleset BuildSelectedRules()
@@ -556,8 +616,15 @@ namespace DrawDecks.Client.Gameplay
             }
 
             var seats = new List<SeatDefinition>();
+            cpuDifficulties.Clear();
             for (int i = 0; i < playerCount; i++)
-                seats.Add(new SeatDefinition("seat-" + (i + 1), slotNames[i], slotKinds[i]));
+            {
+                string seatId = "seat-" + (i + 1);
+                seats.Add(new SeatDefinition(seatId, slotNames[i], slotKinds[i]));
+                lastCpuDifficulties[i] = slotDifficulties[i];
+                if (slotKinds[i] == SeatKind.Cpu)
+                    cpuDifficulties[seatId] = slotDifficulties[i];
+            }
             var rules = BuildSelectedRules();
             var deckIds = BuildDeckIds();
             CreateMatch(seats.ToArray(), rules, deckIds);
@@ -659,7 +726,10 @@ namespace DrawDecks.Client.Gameplay
             foreach (var player in match.Players)
             {
                 string status = player.IsEliminated ? "ELIMINATED" : player.Kind.ToString().ToUpperInvariant();
-                scoreboard.Add(player.DisplayName + "  ·  " + status + "  ·  " + player.Score +
+                string cpuLevel = player.Kind == SeatKind.Cpu && cpuDifficulties.ContainsKey(player.Id)
+                    ? " / " + cpuDifficulties[player.Id].ToString().ToUpperInvariant()
+                    : "";
+                scoreboard.Add(player.DisplayName + "  ·  " + status + cpuLevel + "  ·  " + player.Score +
                     " pts  ·  " + player.Hand.Count + " cards");
             }
             CreateText(pageBody, string.Join("     |     ", scoreboard), 17, TextPrimary,
@@ -905,10 +975,54 @@ namespace DrawDecks.Client.Gameplay
                 Debug.LogWarning("Draw Decks action rejected: " + result.Error);
         }
 
+        private float CpuThinkingDelaySeconds()
+        {
+            return new[] { 0.15f, 0.65f, 1.15f }[cpuDelayIndex % 3];
+        }
+
+        private CpuAiOptions BuildCpuAiOptions(string playerId, bool hasDrawn)
+        {
+            CpuDifficulty difficulty = cpuDifficulties.TryGetValue(playerId, out var value)
+                ? value
+                : CpuDifficulty.Normal;
+            int[] budgets = { 48, 96, 192 };
+            int[] depths = { 1, 2, 4 };
+            return new CpuAiOptions(
+                difficulty: difficulty,
+                seed: match == null ? 0UL : match.Seed,
+                hasDrawnThisTurn: hasDrawn,
+                maximumEvaluations: budgets[cpuBudgetIndex % budgets.Length],
+                planningDepth: depths[cpuBudgetIndex % depths.Length],
+                useDeckCompositionEstimates: difficulty >= CpuDifficulty.Hard,
+                useOpponentModeling: difficulty == CpuDifficulty.Expert);
+        }
+
+        private ActionResult ExecuteCpuDecision(string playerId, CpuAiDecision decision)
+        {
+            switch (decision.Action.Kind)
+            {
+                case CpuActionKind.Draw:
+                    return GameEngine.Draw(match, playerId, 1);
+                case CpuActionKind.PlayCard:
+                    return GameEngine.PlayCard(match, playerId, decision.Action.CardInstanceId,
+                        decision.Action.TargetPlayerId, decision.Action.ChosenSuit);
+                case CpuActionKind.PlayDefense:
+                    return GameEngine.RespondToAttack(match, playerId, decision.Action.CardInstanceId);
+                case CpuActionKind.AcceptAttack:
+                    return GameEngine.RespondToAttack(match, playerId, null);
+                case CpuActionKind.EndTurn:
+                    return GameEngine.EndTurn(match, playerId);
+                default:
+                    throw new InvalidOperationException("Unsupported CPU action: " + decision.Action.Kind);
+            }
+        }
+
         private IEnumerator CpuTurnRoutine()
         {
             cpuRoutineRunning = true;
-            yield return new WaitForSecondsRealtime(0.65f);
+            float thinkDelay = CpuThinkingDelaySeconds();
+            yield return new WaitForSecondsRealtime(thinkDelay);
+
             if (match == null || match.Status != MatchStatus.Active)
             {
                 cpuRoutineRunning = false;
@@ -923,62 +1037,52 @@ namespace DrawDecks.Client.Gameplay
                 yield break;
             }
 
-            if (match.PendingAttack != null)
+            CpuAiDecision decision = CpuAi.Decide(match, cpu.Id, catalog, BuildCpuAiOptions(cpu.Id, false));
+            if (decision.Action.Kind == CpuActionKind.Draw)
             {
-                var defense = cpu.Hand.FirstOrDefault(c => c.Definition.Effect == CardEffect.Reflect) ??
-                              cpu.Hand.FirstOrDefault(c => c.Definition.Effect == CardEffect.Negate) ??
-                              cpu.Hand.FirstOrDefault(c => c.Definition.Effect == CardEffect.Shield);
-                ApplyResult(GameEngine.RespondToAttack(match, cpu.Id, defense == null ? null : defense.InstanceId));
-                notice = defense == null ? cpu.DisplayName + " accepted the attack." :
-                    cpu.DisplayName + " played " + defense.Definition.Name + ".";
-            }
-            else
-            {
-                if (cpu.Hand.Count < match.Rules.MaximumHandSize)
+                var drawResult = GameEngine.Draw(match, cpu.Id, 1);
+                if (!drawResult.Success)
                 {
-                    var drawResult = GameEngine.Draw(match, cpu.Id, 1);
-                    if (drawResult.Success) notice = cpu.DisplayName + " drew a card.";
-                }
-
-                var playableStandard = cpu.Hand
-                    .Where(c => c.Definition.Kind == CardKind.Standard &&
-                        (match.ActiveSuit == Suit.None || c.Definition.Suit == match.ActiveSuit))
-                    .OrderByDescending(c => c.Definition.Value)
-                    .FirstOrDefault();
-                CardInstance choice = playableStandard;
-
-                if (choice == null)
-                    choice = cpu.Hand.FirstOrDefault(c => c.Definition.Effect == CardEffect.Wild);
-                if (choice == null && cpu.Hand.Any(c => c.Definition.Effect == CardEffect.DoubleScore))
-                    choice = cpu.Hand.First(c => c.Definition.Effect == CardEffect.DoubleScore);
-                if (choice == null)
-                    choice = cpu.Hand.FirstOrDefault(c => c.Definition.Effect == CardEffect.DrawTwo);
-                if (choice == null)
-                    choice = cpu.Hand.FirstOrDefault(c => c.Definition.Effect == CardEffect.ReverseOrder);
-                if (choice == null)
-                    choice = cpu.Hand.FirstOrDefault(c => c.Definition.Effect == CardEffect.DeckReset);
-
-                if (choice != null)
-                {
-                    string target = null;
-                    if (NeedsTarget(choice.Definition.Effect))
-                    {
-                        target = match.Players.Where(p => p.Id != cpu.Id && !p.IsEliminated)
-                            .OrderBy(p => p.Score).Select(p => p.Id).FirstOrDefault();
-                        if (choice.Definition.Effect == CardEffect.SkipTurn)
-                            target = NextLivingSeatId(cpu.Id);
-                    }
-                    var result = GameEngine.PlayCard(match, cpu.Id, choice.InstanceId, target,
-                        choice.Definition.Effect == CardEffect.Wild ? Suit.Hearts : Suit.None);
-                    ApplyResult(result);
-                    notice = result.Success ? cpu.DisplayName + " played " + choice.Definition.Name + "." :
-                        cpu.DisplayName + " could not play a card (" + result.Error + ").";
+                    Debug.LogError("CPU draw candidate failed shared validation: " + drawResult.Error);
+                    decision = CpuAi.Decide(match, cpu.Id, catalog, BuildCpuAiOptions(cpu.Id, true));
                 }
                 else
                 {
-                    var pass = GameEngine.EndTurn(match, cpu.Id);
-                    ApplyResult(pass);
-                    notice = cpu.DisplayName + " passed.";
+                    notice = cpu.DisplayName + " drew a card.";
+                    yield return new WaitForSecondsRealtime(Mathf.Max(0.05f, thinkDelay * 0.35f));
+                    decision = CpuAi.Decide(match, cpu.Id, catalog, BuildCpuAiOptions(cpu.Id, true));
+                }
+            }
+
+            if (match != null && match.Status == MatchStatus.Active && match.CurrentPlayer.Id == cpu.Id)
+            {
+                if (decision.Action.Kind == CpuActionKind.Draw)
+                {
+                    Debug.LogError("CPU policy attempted a second draw in one turn. Ending turn safely.");
+                    var end = GameEngine.EndTurn(match, cpu.Id);
+                    ApplyResult(end);
+                }
+                else
+                {
+                    var result = ExecuteCpuDecision(cpu.Id, decision);
+                    if (!result.Success)
+                    {
+                        Debug.LogError("CPU action rejected despite shared validation: " + result.Error +
+                            " / " + decision.Action.Kind + " / " + decision.Reason);
+                        var fallback = match.PendingAttack != null
+                            ? GameEngine.RespondToAttack(match, cpu.Id, null)
+                            : GameEngine.EndTurn(match, cpu.Id);
+                        ApplyResult(fallback);
+                        notice = cpu.DisplayName + " used a safe fallback after a rejected action.";
+                    }
+                    else
+                    {
+                        notice = cpu.DisplayName + " (" + BuildCpuAiOptions(cpu.Id, false).Difficulty +
+                            ") " + decision.Reason;
+                        if (decision.Action.Kind == CpuActionKind.PlayCard ||
+                            decision.Action.Kind == CpuActionKind.PlayDefense)
+                            PlayUiSound(true);
+                    }
                 }
             }
 
@@ -986,7 +1090,7 @@ namespace DrawDecks.Client.Gameplay
             SyncTurnFlow();
         }
 
-        private string NextLivingSeatId(string playerId)
+                private string NextLivingSeatId(string playerId)
         {
             int index = match.Players.ToList().FindIndex(p => p.Id == playerId);
             for (int step = 1; step <= match.Players.Count; step++)
