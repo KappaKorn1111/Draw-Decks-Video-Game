@@ -661,7 +661,6 @@ namespace DrawDecks.Client.Gameplay
             var profile = LocalCustomizationStore.LoadRules().FirstOrDefault(item => item.id == activeRulesProfileId);
             if (profile != null)
             {
-                mode = (GameMode)Mathf.Clamp(profile.gameMode, 0, 4);
                 target = profile.targetScore;
                 startingHand = profile.startingHandSize;
                 maximumHand = profile.maximumHandSize;
