@@ -4,7 +4,7 @@ A strategy card game for 2–4 total seats, supporting human and CPU players.
 
 ## Current milestone
 
-Phase 3 — Playable Unity Client & Local Match System. The project now includes a runtime-built Unity menu, local match setup, hot-seat handoffs, CPU turns, card actions, and match results. See [Local Client](docs/LOCAL_CLIENT.md), [Project Status](docs/PROJECT_STATUS.md), the [rulebook](docs/RULEBOOK.md), and [implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md).
+Phase 3 — Playable Unity Client & Local Match System. The project includes a runtime-built Unity menu, local match setup, hot-seat handoffs, CPU turns, card actions, and match results. See [Local Client](docs/LOCAL_CLIENT.md), [Project Status](docs/PROJECT_STATUS.md), the [rulebook](docs/RULEBOOK.md), and [implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md).
 
 ## Architecture
 
@@ -27,6 +27,8 @@ Phase 3 — Playable Unity Client & Local Match System. The project now includes
 ## Quick start
 
 See [Development Setup](docs/DEVELOPMENT_SETUP.md) for backend tooling. To launch the local playable game, open client/ in Unity 6000.3.x, allow package resolution, open Assets/Scenes/Main.unity, and press Play. The editor bootstrap creates the launch scene and adds it to Build Settings when the project is first opened.
+
+The shared local Unity package is resolved from shared/DrawDecks.Domain via file:../../shared/DrawDecks.Domain in client/Packages/manifest.json. Use the same repository folder layout; do not move client/ independently from shared/.
 
     dotnet restore server/DrawDecks.sln
     dotnet build server/DrawDecks.sln -c Release
