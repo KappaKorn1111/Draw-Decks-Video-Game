@@ -50,6 +50,41 @@ public sealed class CpuAiTests
     }
 
     [Fact]
+    public void HardWeightsScoreThreatMoreStronglyThanNormal()
+    {
+        var catalog = CardCatalog.CreateDefault();
+        var seats = new[]
+        {
+            new SeatDefinition("cpu", "CPU", SeatKind.Cpu),
+            new SeatDefinition("high-score", "High Score", SeatKind.Human),
+            new SeatDefinition("large-hand", "Large Hand", SeatKind.Human)
+        };
+        var match = MatchFactory.Create("hard-threat", 707070UL, seats, catalog,
+            new Ruleset(startingHandSize: 1, maximumHandSize: 7, maximumPlayers: 3, targetScore: 100));
+
+        match.CurrentPlayer.MutableHand.Clear();
+        match.CurrentPlayer.MutableHand.Add(new CardInstance("cpu-steal-target-card", catalog.Get("attack-steal")));
+
+        match.MutablePlayers[1].Score = 50;
+        match.MutablePlayers[1].MutableHand.Clear();
+        match.MutablePlayers[1].MutableHand.Add(new CardInstance("high-score-held", catalog.Get("standard-hearts-2")));
+
+        match.MutablePlayers[2].Score = 0;
+        match.MutablePlayers[2].MutableHand.Clear();
+        for (int index = 0; index < 7; index++)
+            match.MutablePlayers[2].MutableHand.Add(new CardInstance(
+                "large-hand-held-" + index, catalog.Get("standard-clubs-2")));
+
+        var normal = CpuAi.Decide(match, "cpu", catalog,
+            new CpuAiOptions(CpuDifficulty.Normal, hasDrawnThisTurn: true));
+        var hard = CpuAi.Decide(match, "cpu", catalog,
+            new CpuAiOptions(CpuDifficulty.Hard, hasDrawnThisTurn: true));
+
+        Assert.Equal("large-hand", normal.Action.TargetPlayerId);
+        Assert.Equal("high-score", hard.Action.TargetPlayerId);
+    }
+
+    [Fact]
     public void ExpertUsesPublicOpponentBehaviorWithoutReadingOpponentHands()
     {
         var catalog = CardCatalog.CreateDefault();
