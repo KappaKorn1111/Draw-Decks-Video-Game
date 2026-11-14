@@ -184,6 +184,36 @@ public sealed class StabilityRegressionTests
     }
 
     [Fact]
+    public void MaximumTurnLimitPreventsDeckResetStyleStalemates()
+    {
+        var seats = new[]
+        {
+            new SeatDefinition("p0", "Player 0", SeatKind.Human),
+            new SeatDefinition("p1", "Player 1", SeatKind.Cpu)
+        };
+        var deck = Catalog.Definitions
+            .Where(definition => definition.Kind == CardKind.Standard)
+            .Select(definition => definition.Id)
+            .ToArray();
+        var match = MatchFactory.Create(
+            "turn-limit",
+            1009UL,
+            seats,
+            Catalog,
+            new Ruleset(startingHandSize: 5, maximumHandSize: 7, maximumPlayers: 2,
+                targetScore: 100, maximumTurns: 4),
+            deck);
+
+        match.ActiveSuit = Suit.None;
+        for (int turn = 0; turn < 4 && match.Status == MatchStatus.Active; turn++)
+            Assert.True(GameEngine.EndTurn(match, match.CurrentPlayer.Id).Success);
+
+        Assert.NotEqual(MatchStatus.Active, match.Status);
+        Assert.Contains(match.Events, gameEvent =>
+            gameEvent.Type == "SuddenScoreStarted" && gameEvent.Data == "maximum-turn-limit");
+    }
+
+    [Fact]
     public void CpuDoesNotWasteADefenseAgainstBlockedDrawWhenAlreadyAtHandLimit()
     {
         var seats = new[]
