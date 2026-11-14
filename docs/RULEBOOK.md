@@ -1,6 +1,9 @@
-# Confluence — Draw Decks Default Rulebook
+# Confluence — Draw Decks Target Rulebook
 
-**Version:** 0.1.0
+**Version:** 0.1.0  
+**Status:** Product target specification — not fully implemented by the current shared engine.
+
+> **Implementation notice:** This document describes the intended Confluence rules. The current engine is a score-based card-action implementation. It does not yet implement vitality/health, Strike/Guard damage, Forge pair scoring, the two/three-card play sequence, all rank-specific Tactic/Crest behaviors, or the full final-turn Sudden Score procedure. See [Project Status](PROJECT_STATUS.md) for the verified implementation scope and remaining parity work. Do not use this document as proof that those mechanics are already playable.
 
 ## Objective
 Be the last player with vitality remaining. If the draw pile runs out and the table stalls, finish with the highest prestige.
@@ -23,7 +26,7 @@ Four suits, ranks 2–Ace. Rank bands define categories: 2–5 Strike, 6–8 Gua
 - Forge (9–10): combine two same-suit Forge cards as one play; gain prestige equal to the sum of their ranks; discard both.
 - Jack: draw one extra card, subject to hand limit.
 - Queen: exchange one card in hand for the top draw-pile card.
-- King: gain one additional play this turn, maximum three.
+- King: gain one additional play, maximum three.
 - Crest Ace: gain prestige equal to five plus the number of living opponents.
 
 ## Elimination and scoring
@@ -36,6 +39,6 @@ When the draw pile is empty, track consecutive turns without a Strike, Forge, or
 Cards must be held, played in the correct phase, within the play limit, and target valid opponents. Guards only react to Strikes; Forge requires two same-suit Forge cards. Invalid commands cause no state mutation. Online server is authoritative.
 
 ## Configurable rules
-Seat bounds, starting hand, hand limit, vitality, draw count, plays per turn, catalog version, effect parameters, elimination, deck exhaustion, scoring, timeouts, and tie-break order are versioned ruleset data pinned to each match by hash.
+Seat bounds, starting hand, hand limit, vitality, draw count, plays per turn, catalog version, effect parameters, elimination, deck exhaustion, scoring, timeouts, and tie-break order are versioned ruleset data pinned to each match.
 
-This is the approved default product baseline. The earlier High Card implementation is only a temporary scaffold and must not be mistaken for complete Confluence rules.
+This is the product target baseline. Implementation must be tracked separately in the project status document.
