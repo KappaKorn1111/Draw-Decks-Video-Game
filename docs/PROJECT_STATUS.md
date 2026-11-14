@@ -33,5 +33,6 @@
 
 ## Acceptance state
 
-**Implementation status:** BUILT — CI and Unity Editor validation must both be green before Prompt 03 is considered accepted.  
-**Unity verification:** Not yet executed in this environment.  
+**Implementation status:** IMPLEMENTED — local client source, shared Unity package integration, and seat-composition tests are committed.  
+**CI status:** PASS on commit 4879b44db1d5317ecb470867f49884c68d881ca4 — Release build succeeded; 27 tests passed, 0 failed, 0 skipped.  
+**Unity verification:** Pending. Unity Editor import, Play Mode end-to-end match, and desktop player build must still be executed before Prompt 03 is fully accepted.  
