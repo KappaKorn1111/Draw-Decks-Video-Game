@@ -1,8 +1,8 @@
 # Draw Decks — Implementation Status
 
-**Current phase:** Phase 4 — CPU Opponents & Intelligent Game AI  
-**Working branch:** dev/foundation  
-**Pull request:** #1 (open; not merged)
+**Current phase:** Phase 5 — Deck Builder & Custom Ruleset foundation  
+**Working branch:** feature/prompt-05-customization  
+**Pull request:** #2 (open; not merged)
 
 ## Phase 2 — Shared card system and rules engine
 
@@ -72,3 +72,16 @@ Run: https://github.com/KappaKorn1111/Draw-Decks-Video-Game/actions/runs/4356929
 **CI:** PASS — 45/45 tests on commit 8ccf9137c297d59d3f35b18fae603891bdafe205.  
 **Unity runtime acceptance:** PENDING — Editor import, Play Mode CPU matches, UI/hot-seat walkthroughs, and desktop player builds remain required.  
 **Confluence rulebook parity:** NEEDS IMPLEMENTATION — the listed ruleset gaps must be resolved before claiming full product-rulebook compliance.
+
+
+## Prompt 05 — customization foundation
+
+- Added immutable, versioned deck and ruleset profile models.
+- Added deck editing sessions, card catalog search/filtering, deck rarity/effect statistics, and duplicate/banned/allowlist/special/effect validation.
+- Added five named mode presets and configured Classic/Custom match creation validation.
+- Added a storage interface and in-memory implementation for tests and session workflows.
+- Added eight customization regression tests.
+- GitHub Actions run 43572435711 passed: Release build succeeded with 0 warnings and 0 errors; **53 tests passed, 0 failed, 0 skipped**.
+- Elimination, Team Battle, and Survival runtime mechanics; durable local persistence; Unity editor integration; and community sharing/server serialization remain unimplemented.
+
+Prompt 05 acceptance remains **NEEDS REVISION**. See [Customization System](CUSTOMIZATION_SYSTEM.md).

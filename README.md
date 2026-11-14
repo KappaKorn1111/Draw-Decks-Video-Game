@@ -4,9 +4,9 @@ A strategy card game for 2–4 total seats, supporting human and CPU players.
 
 ## Current milestone
 
-Phase 4 — CPU Opponents & Intelligent Game AI, followed by a stabilization pass. The shared C# domain includes four CPU difficulty levels, legal-action candidate generation, hidden-information-safe observations, seeded decision-making, turn-order/skip/replay safeguards, deck-exhaustion and maximum-turn termination, and automated match simulations.
+Phase 5 — Deck Builder & Custom Ruleset foundation (PR #2; runtime mode completion remains in progress). The shared C# domain includes four CPU difficulty levels, legal-action candidate generation, hidden-information-safe observations, seeded decision-making, turn-order/skip/replay safeguards, deck-exhaustion and maximum-turn termination, and automated match simulations.
 
-See [CPU AI](docs/CPU_AI.md), [Stabilization Audit](docs/STABILIZATION_AUDIT.md), [Local Client](docs/LOCAL_CLIENT.md), [Project Status](docs/PROJECT_STATUS.md), the [target rulebook](docs/RULEBOOK.md), and [implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md).
+See [Customization System](docs/CUSTOMIZATION_SYSTEM.md), [CPU AI](docs/CPU_AI.md), [Stabilization Audit](docs/STABILIZATION_AUDIT.md), [Local Client](docs/LOCAL_CLIENT.md), [Project Status](docs/PROJECT_STATUS.md), the [target rulebook](docs/RULEBOOK.md), and [implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md).
 
 ## Architecture
 
@@ -50,4 +50,6 @@ Never commit secrets, signing keys, certificates, or production connection strin
 
 ## License
 
-Pending project-owner decision.
+This repository's original software code is licensed under the [Apache License, Version 2.0](LICENSE). Third-party assets and dependencies may carry separate licenses; review their notices before redistribution.
+
+See [Prompt 05 customization status](docs/CUSTOMIZATION_SYSTEM.md) for the current deck builder and ruleset implementation scope.
