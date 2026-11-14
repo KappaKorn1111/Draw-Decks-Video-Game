@@ -121,6 +121,69 @@ public sealed class StabilityRegressionTests
     }
 
     [Fact]
+    public void EmptyDeckStalemateResolvesByPrestigeAfterTwoQuietTurnsPerPlayer()
+    {
+        var seats = new[]
+        {
+            new SeatDefinition("p0", "Player 0", SeatKind.Human),
+            new SeatDefinition("p1", "Player 1", SeatKind.Cpu)
+        };
+        var deck = Enumerable.Range(2, 10)
+            .Select(rank => "standard-clubs-" + rank)
+            .ToArray();
+        var match = MatchFactory.Create(
+            "sudden-score",
+            1007UL,
+            seats,
+            Catalog,
+            new Ruleset(startingHandSize: 5, maximumHandSize: 7, maximumPlayers: 2, targetScore: 100),
+            deck);
+
+        match.ActiveSuit = Suit.Hearts;
+        match.Players[0].Score = 12;
+        match.Players[1].Score = 8;
+        Assert.Equal(0, match.DrawPileCount);
+
+        for (int turn = 0; turn < 4 && match.Status == MatchStatus.Active; turn++)
+            Assert.True(GameEngine.EndTurn(match, match.CurrentPlayer.Id).Success);
+
+        Assert.Equal(MatchStatus.Completed, match.Status);
+        Assert.Equal("p0", match.WinnerPlayerId);
+        Assert.Contains(match.Events, gameEvent => gameEvent.Type == "SuddenScoreStarted");
+        Assert.Contains(match.Events, gameEvent => gameEvent.Type == "MatchWon" && gameEvent.Data == "sudden-score");
+    }
+
+    [Fact]
+    public void EmptyDeckSuddenScoreUsesSharedVictoryForExactScoreAndHandTie()
+    {
+        var seats = new[]
+        {
+            new SeatDefinition("p0", "Player 0", SeatKind.Human),
+            new SeatDefinition("p1", "Player 1", SeatKind.Cpu)
+        };
+        var deck = Enumerable.Range(2, 10)
+            .Select(rank => "standard-clubs-" + rank)
+            .ToArray();
+        var match = MatchFactory.Create(
+            "sudden-score-tie",
+            1008UL,
+            seats,
+            Catalog,
+            new Ruleset(startingHandSize: 5, maximumHandSize: 7, maximumPlayers: 2, targetScore: 100),
+            deck);
+
+        match.ActiveSuit = Suit.Hearts;
+        match.Players[0].Score = 10;
+        match.Players[1].Score = 10;
+
+        for (int turn = 0; turn < 4 && match.Status == MatchStatus.Active; turn++)
+            Assert.True(GameEngine.EndTurn(match, match.CurrentPlayer.Id).Success);
+
+        Assert.Equal(MatchStatus.Draw, match.Status);
+        Assert.Null(match.WinnerPlayerId);
+    }
+
+    [Fact]
     public void CpuDoesNotWasteADefenseAgainstBlockedDrawWhenAlreadyAtHandLimit()
     {
         var seats = new[]
