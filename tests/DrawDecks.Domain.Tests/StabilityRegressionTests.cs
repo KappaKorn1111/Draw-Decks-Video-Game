@@ -230,7 +230,6 @@ public sealed class StabilityRegressionTests
         var rules = new Ruleset(startingHandSize: 5, maximumHandSize: 7,
             maximumPlayers: 2, targetScore: 100, maximumTurns: 4);
         var match = MatchFactory.Create("turn-limit-replay", 1010UL, seats, Catalog, rules, deck);
-        match.ActiveSuit = Suit.Hearts;
 
         for (int turn = 0; turn < 4 && match.Status == MatchStatus.Active; turn++)
             Assert.True(GameEngine.EndTurn(match, match.CurrentPlayer.Id).Success);
