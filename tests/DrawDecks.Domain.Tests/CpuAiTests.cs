@@ -144,6 +144,8 @@ public sealed class CpuAiTests
         {
             for (int playerCount = 2; playerCount <= 4; playerCount++)
             {
+              for (int seedOffset = 0; seedOffset < 10; seedOffset++)
+              {
                 var catalog = CardCatalog.CreateDefault();
                 var seats = Enumerable.Range(0, playerCount)
                     .Select(index => new SeatDefinition(
@@ -158,9 +160,10 @@ public sealed class CpuAiTests
                     maximumPlayers: playerCount,
                     allowStacking: false,
                     targetScore: 45);
-                var seed = 900000UL + (ulong)playerCount * 100UL + (ulong)difficulty;
+                var seed = 900000UL + (ulong)playerCount * 1000UL +
+                           (ulong)difficulty * 10UL + (ulong)seedOffset;
                 var match = MatchFactory.Create(
-                    "cpu-sim-" + difficulty + "-" + playerCount,
+                    "cpu-sim-" + difficulty + "-" + playerCount + "-" + seedOffset,
                     seed,
                     seats,
                     catalog,
@@ -215,6 +218,7 @@ public sealed class CpuAiTests
                 Assert.InRange(commands, 1, 2500);
                 if (match.Status == MatchStatus.Completed)
                     Assert.Contains(match.Players, player => player.Id == match.WinnerPlayerId);
+              }
             }
         }
     }
