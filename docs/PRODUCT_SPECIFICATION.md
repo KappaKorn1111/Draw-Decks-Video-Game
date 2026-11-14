@@ -1,8 +1,10 @@
 # Draw Decks — Product & System Specification
 
 **Version:** 0.1.0  
-**Status:** Foundation specification  
+**Status:** Product target specification — not a complete description of the currently implemented runtime.  
 **Seats:** 1–4 total, humans and CPU opponents combined
+
+> **Implementation notice:** This document describes the intended Confluence game and online product scope. The current shared engine implements a score-based card-action ruleset and local CPU matches, not the complete vitality/combat/Forge/two-card-play Confluence rulebook. LAN/internet lobbies, authentication, chat, reconnect, and authoritative online hosting are also not implemented yet. See [Project Status](PROJECT_STATUS.md) and [Stabilization Audit](STABILIZATION_AUDIT.md) for verified implementation and remaining parity work.
 
 ## Product scope
 Draw Decks is a turn-based multiplayer strategy card game. The initial release targets Windows, macOS, and Linux desktop. The client architecture must remain portable to Android and iOS. Supported play modes are hot-seat, LAN-hosted, and internet multiplayer with lobbies, chat, reconnect, and authoritative match hosting.
