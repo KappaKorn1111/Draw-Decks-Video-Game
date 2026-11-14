@@ -1,23 +1,32 @@
-# Architecture
+# Draw Decks — System Architecture
 
-## Dependency direction
-Unity presentation and platform adapters depend on the shared domain. Backend application services depend on the same domain contracts. The domain has no Unity, ASP.NET, database, Redis, or transport dependency.
+## Runtime topology
+Unity client → transport adapter → ASP.NET Core API/SignalR gateway → authoritative match application → shared domain engine. PostgreSQL stores durable records; Redis handles presence, matchmaking coordination, rate limits, and ephemeral leases.
 
-## Components
-- `shared/DrawDecks.Domain`: deterministic rules, match state, validation, scoring.
-- `client/`: Unity UI, input, presentation, local adapters, client networking adapters.
-- `server/`: ASP.NET Core API, identity/session orchestration, SignalR gateways, authoritative match hosting.
-- `infra/`: PostgreSQL, Redis, container and deployment definitions.
-- `tests/`: domain, API, persistence, networking, and end-to-end test suites.
+## Architecture boundaries
+- Unity presentation: scenes, UI, animation, audio, accessibility, localization.
+- Unity application: use cases, view models, input actions, navigation.
+- Client adapters: hot-seat, LAN, and online command/event transports.
+- Shared domain: cards, rulesets, match aggregate, validation, deterministic transitions, scoring.
+- Backend API: identity integration, profiles, decks, lobby, matchmaking, chat, administration.
+- Match host: authoritative command sequencing, domain execution, event publication, snapshots, reconnect recovery.
+- Persistence: PostgreSQL repositories/migrations; Redis ephemeral coordination only.
+- Content management: versioned card catalog/ruleset manifests, validation, publication, rollback, match-pinned hashes.
 
-## Authority and security
-Online clients submit intent, never authoritative state. The server validates every action against the shared rules engine and publishes resulting state. Clients must not decide scores, turn ownership, winners, or random outcomes. Match seeds are reproducibility metadata, not secrets. Authentication and authorization are enforced server-side.
+## Communication contracts
+Clients submit versioned commands with match ID, seat credential, command ID, expected state version, and payload. Server validates identity, seat ownership, turn, state version, rate limits, and domain invariants. SignalR carries sequenced real-time events; REST handles account/profile/catalog/lobby queries. LAN uses the same command/event contract over a local host transport.
 
-## Persistence boundaries
-PostgreSQL stores durable accounts, profiles, deck definitions, match records, and results. Redis stores ephemeral presence, matchmaking coordination, and short-lived session state. Durable records must not rely on Redis as their only copy.
+## Database architecture
+PostgreSQL stores users, identities, profiles, decks, card/ruleset versions, lobbies, matches, seat membership, event log, snapshots, results, reports, and audit records. Use UUIDs, UTC timestamps, foreign keys, unique constraints, and explicit migrations. Redis is never the sole store for durable data.
 
-## Transport boundaries
-Hot-seat, LAN, and online play call the same domain action interface. Transport adapters serialize commands and events; they do not reimplement game rules.
+## Authentication and authorization
+Use OIDC/OAuth-compatible identity providers. Validate issuer, audience, signature, expiry, and nonce. Map principals to account and seat permissions. Seat credentials are short-lived, scoped, revocable, and never logged. LAN guest access is explicit and host-controlled. Secrets are injected from environment/secret stores.
 
-## Determinism
-Shuffle randomness is explicitly seeded and implemented in the domain layer. The generator is for reproducible gameplay only and must never be used for credentials, tokens, or cryptographic material.
+## Deployment
+Local: Docker Compose PostgreSQL/Redis, .NET API, Unity Editor. Production: containerized API and match workers behind TLS ingress; managed PostgreSQL/Redis; object storage/CDN for versioned content; centralized logs, metrics, traces, backups, and alerts. Signed client binaries distributed per platform. Licensed/self-hosted Unity runners produce platform builds.
+
+## Testing
+Domain unit/property tests; API integration tests with disposable services; transport contract tests; deterministic replay tests; Unity EditMode/PlayMode tests; multiplayer soak/load tests; security tests; platform smoke tests.
+
+## Failure and recovery
+Reconnect resumes from an authorized snapshot plus event sequence. Idempotent command IDs prevent duplicate plays. Server leases prevent split-brain match ownership. PostgreSQL transactions persist event/state atomically. Redis loss may degrade presence/matchmaking but cannot erase durable results.
