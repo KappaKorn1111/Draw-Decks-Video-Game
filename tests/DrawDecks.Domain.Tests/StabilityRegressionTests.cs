@@ -78,10 +78,18 @@ public sealed class StabilityRegressionTests
     [Fact]
     public void MatchReplayPreservesQueuedSkipTargets()
     {
-        var match = MatchFactory.Create("skip-replay", 1004UL, FourHumanSeats(), Catalog);
-        match.Players[0].MutableHand.Add(new CardInstance("skip-p3-replay", Catalog.Get("action-skip")));
+        MatchState? match = null;
+        for (ulong seed = 1; seed < 10000 && match == null; seed++)
+        {
+            var candidate = MatchFactory.Create("skip-replay", seed, FourHumanSeats(), Catalog);
+            if (candidate.Players[0].Hand.Any(card => card.DefinitionId == "action-skip"))
+                match = candidate;
+        }
 
-        Assert.True(GameEngine.PlayCard(match, "p0", "skip-p3-replay", "p3").Success);
+        Assert.NotNull(match);
+        var skipCard = match!.Players[0].Hand.First(card => card.DefinitionId == "action-skip");
+
+        Assert.True(GameEngine.PlayCard(match, "p0", skipCard.InstanceId, "p3").Success);
         Assert.Contains("p3", match.PendingSkipPlayerIds);
 
         var replay = MatchReplay.Replay(match, Catalog);
