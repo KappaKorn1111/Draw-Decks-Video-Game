@@ -1,70 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 namespace DrawDecks.Domain;
-
 public enum SeatKind { Human, Cpu }
-public enum MatchStatus { Active, Completed }
-public enum ActionError { None, MatchNotActive, NotPlayersTurn, CardNotInHand, InvalidPlayer }
-
-public sealed class Ruleset
-{
-    public int StartingHandSize { get; }
-    public int Rounds { get; }
-
-    public Ruleset(int startingHandSize = 5, int rounds = 5)
-    {
-        if (startingHandSize < 1 || startingHandSize > 10) throw new ArgumentOutOfRangeException(nameof(startingHandSize));
-        if (rounds < 1 || rounds > 10) throw new ArgumentOutOfRangeException(nameof(rounds));
-        StartingHandSize = startingHandSize;
-        Rounds = rounds;
-    }
-
-    public static Ruleset Default => new Ruleset();
-}
-
-public sealed class PlayerState
-{
-    private readonly List<Card> _hand;
-    public string Id { get; }
-    public string DisplayName { get; }
-    public SeatKind Kind { get; }
-    public IReadOnlyList<Card> Hand => _hand.AsReadOnly();
-    public int Score { get; internal set; }
-
-    internal PlayerState(string id, string displayName, SeatKind kind, IEnumerable<Card> hand)
-    { Id = id; DisplayName = displayName; Kind = kind; _hand = new List<Card>(hand); }
-
-    internal bool RemoveCard(Card card) => _hand.Remove(card);
-}
-
-public sealed class PlayedCard
-{
-    public string PlayerId { get; }
-    public Card Card { get; }
-    public int Round { get; }
-    internal PlayedCard(string playerId, Card card, int round)
-    { PlayerId = playerId; Card = card; Round = round; }
-}
-
-public sealed class MatchState
-{
-    private readonly List<PlayerState> _players;
-    private readonly List<PlayedCard> _plays = new List<PlayedCard>();
-    public string MatchId { get; }
-    public ulong Seed { get; }
-    public Ruleset Rules { get; }
-    public IReadOnlyList<PlayerState> Players => _players.AsReadOnly();
-    public IReadOnlyList<PlayedCard> Plays => _plays.AsReadOnly();
-    public MatchStatus Status { get; internal set; }
-    public int CurrentRound { get; internal set; }
-    public int CurrentPlayerIndex { get; internal set; }
-    public string? WinnerPlayerId { get; internal set; }
-    public bool IsDraw { get; internal set; }
-
-    internal MatchState(string matchId, ulong seed, Ruleset rules, IEnumerable<PlayerState> players)
-    { MatchId = matchId; Seed = seed; Rules = rules; _players = players.ToList(); Status = MatchStatus.Active; CurrentRound = 1; }
-
-    internal void Record(PlayedCard play) => _plays.Add(play);
+public enum MatchStatus { Active, Completed, Draw }
+public enum ActionError { None, MatchNotActive, NotPlayersTurn, CardNotInHand, InvalidPlayer, InvalidTarget, InvalidPhase, InvalidCardType, HandLimitReached, DeckEmpty, InvalidDefense }
+public sealed class Ruleset {public int StartingHandSize{get;} public int MaximumHandSize{get;} public int MaximumPlayers{get;} public bool AllowStacking{get;} public Ruleset(int startingHandSize=5,int maximumHandSize=7,int maximumPlayers=4,bool allowStacking=false){if(startingHandSize<1||maximumHandSize<startingHandSize||maximumPlayers<1||maximumPlayers>4)throw new ArgumentOutOfRangeException(nameof(startingHandSize));StartingHandSize=startingHandSize;MaximumHandSize=maximumHandSize;MaximumPlayers=maximumPlayers;AllowStacking=allowStacking;} public static Ruleset Default=>new();}
+public sealed class SeatDefinition {public string Id{get;} public string DisplayName{get;} public SeatKind Kind{get;} public SeatDefinition(string id,string name,SeatKind kind){if(string.IsNullOrWhiteSpace(id)||string.IsNullOrWhiteSpace(name))throw new ArgumentException("Seat id and name required.");Id=id;DisplayName=name;Kind=kind;}}
+public sealed class PlayerState {internal readonly List<CardInstance> MutableHand=new(); public string Id{get;} public string DisplayName{get;} public SeatKind Kind{get;} public IReadOnlyList<CardInstance> Hand=>MutableHand.AsReadOnly(); public int Score{get;internal set;} public bool IsEliminated{get;internal set;} internal PlayerState(SeatDefinition seat){Id=seat.Id;DisplayName=seat.DisplayName;Kind=seat.Kind;}}
+public sealed class GameEvent {public long Sequence{get;} public string Type{get;} public string PlayerId{get;} public string? CardInstanceId{get;} public string? TargetPlayerId{get;} public string Data{get;} public GameEvent(long seq,string type,string player,string? card,string? target,string data){Sequence=seq;Type=type;PlayerId=player;CardInstanceId=card;TargetPlayerId=target;Data=data;}}
+public sealed class PendingAttack {public string AttackerId{get;} public string TargetId{get;} public CardEffect Effect{get;} public string CardInstanceId{get;} internal PendingAttack(string a,string t,CardEffect e,string c){AttackerId=a;TargetId=t;Effect=e;CardInstanceId=c;}}
+public sealed class MatchState {
+ internal readonly List<PlayerState> MutablePlayers; internal readonly List<CardInstance> DrawPile; internal readonly List<CardInstance> MutableDiscardPile=new(); internal readonly List<GameEvent> MutableEvents=new(); internal ulong RandomState; internal int Direction=1; internal bool DoubleScoreActive; internal bool BlockDrawActive; internal long Sequence;
+ public string MatchId{get;} public ulong Seed{get;} public string CatalogVersion{get;} public Ruleset Rules{get;} public IReadOnlyList<PlayerState> Players=>MutablePlayers.AsReadOnly(); public IReadOnlyList<CardInstance> DiscardPile=>MutableDiscardPile.AsReadOnly(); public int DrawPileCount=>DrawPile.Count; public IReadOnlyList<GameEvent> Events=>MutableEvents.AsReadOnly(); public MatchStatus Status{get;internal set;}=MatchStatus.Active; public int CurrentPlayerIndex{get;internal set;} public int TurnNumber{get;internal set;}=1; public string? WinnerPlayerId{get;internal set;} public PendingAttack? PendingAttack{get;internal set;} public Suit ActiveSuit{get;internal set;}=Suit.None; internal MatchState(string id,ulong seed,string version,Ruleset rules,List<PlayerState> players,List<CardInstance> deck){MatchId=id;Seed=seed;CatalogVersion=version;Rules=rules;MutablePlayers=players;DrawPile=deck;RandomState=seed==0?0x9E3779B97F4A7C15UL:seed;} internal void Emit(string type,string player,string? card=null,string? target=null,string data="")=>MutableEvents.Add(new GameEvent(++Sequence,type,player,card,target,data)); public PlayerState CurrentPlayer=>MutablePlayers[CurrentPlayerIndex];
 }
