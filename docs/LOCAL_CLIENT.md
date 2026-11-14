@@ -2,12 +2,12 @@
 
 ## Launch
 
-1. Open the `client/` folder in Unity 6.3 (6000.3.x).
-2. Allow the editor to resolve the local `com.drawdecks.domain` package at `../shared/DrawDecks.Domain`.
-3. Allow the editor bootstrap to create `Assets/Scenes/Main.unity` and add it to Build Settings.
-4. Open the Main scene and press Play. The runtime constructs its Canvas and EventSystem; no scene prefab setup is required.
+1. Open the client/ folder in Unity 6.3 (6000.3.x).
+2. Allow Package Manager to resolve the local com.drawdecks.domain package. Its manifest path is file:../../shared/DrawDecks.Domain, relative to client/Packages.
+3. Allow the editor bootstrap to create Assets/Scenes/Main.unity and add it to Build Settings.
+4. Open the Main scene and press Play. The runtime constructs its Canvas and Input System EventSystem; no scene prefab setup is required.
 
-The shared C# domain package is imported from the repository's `shared/DrawDecks.Domain` folder. The Unity client does not maintain a fork of the card rules.
+The shared C# domain package is imported from the repository's shared/DrawDecks.Domain folder. The source is kept compatible with Unity 6.3's C# 9 compiler so the Unity client and .NET backend consume the same rules code.
 
 ## Implemented local experience
 
@@ -18,7 +18,7 @@ The shared C# domain package is imported from the repository's `shared/DrawDecks
 - Hot-seat privacy handoff between human players. A player's hand is not rendered until that seat confirms readiness.
 - Current hand, opponent hand counts, turn indicator, draw pile, discard pile, scoreboard, active suit, selected target/suit, turn timer, action feedback, and recent event history.
 - Draw, play, attack response, defense, pass/end-turn, pause, rematch, match results, and local statistics.
-- Runtime button/card selection feedback, page fade transitions, and generated UI sound effects.
+- Runtime button/card selection feedback, page/card entrance transitions, and generated UI sound effects.
 
 ## Current rules and deliberate boundaries
 
@@ -32,4 +32,4 @@ The shared C# domain package is imported from the repository's `shared/DrawDecks
 
 ## Verification
 
-The .NET CI workflow validates the shared domain and automated local-match seat-composition tests. Unity Editor import, Play Mode, and player builds still require a Unity Editor installation and have to be verified in Unity.
+The .NET CI workflow validates the shared domain and automated local-match seat-composition tests. Unity Editor import, Play Mode, and player builds still require a Unity Editor installation and must be verified in Unity.
