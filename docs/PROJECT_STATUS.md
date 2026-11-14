@@ -6,17 +6,16 @@
 
 ## Phase 2 implemented
 - Versioned catalog with 52 standard cards and all 13 requested action, attack, defense, and special definitions.
-- Unique physical card instances, rarity metadata, values, suits, ranks, and per-definition copy limits.
-- Deck validation, seeded shuffle, deal, draw, hand limits, play, discard, reverse direction, and skip scheduling.
+- Unique physical card instances, rarity, availability, values, suits, ranks, and per-definition copy limits.
+- Deck validation, deterministic seeded shuffle, deal, draw, hand limits, play, discard, reverse direction, skip scheduling, and suit selection.
 - Domain resolution for Draw 2, Swap Hands, Steal, Random Discard, Block Draw, Shield, Reflect, Negate, Wild, Deck Reset, and Double Score.
-- Typed command failures and ordered event records.
-- xUnit coverage for catalog/effect definitions, deck validation, shuffle determinism, draw/discard, hand limits, empty deck, invalid commands, attack/defense, and representative special effects.
+- Typed command failures, elimination/target-score victory, sequenced transition events, accepted-command records, and deterministic replay/equivalence checks.
+- Automated coverage for catalog definitions, deck constraints, seeded shuffle, draw/discard, hand limits, empty deck, invalid commands, attack/defense, card effects, elimination, victory, and replay.
 
-## Explicitly incomplete
-- Vitality/elimination, complete win and tie-break conditions, and replay-from-event verification.
-- Full effect stacking semantics and exhaustive multi-effect permutations.
-- Authentication, database runtime integration, SignalR, matchmaking, LAN, and authoritative match workers.
+## Remaining work
+- Full stacking behavior is intentionally disabled; the ruleset rejects stacking as a default capability and the composition policy remains future work.
+- Persistent event storage, tamper-evident audit signatures, online authoritative command hosting, authentication, SignalR, matchmaking, and LAN remain future phases.
 - Unity Editor import/build and Docker service startup have not been verified.
 
 ## Acceptance
-The shared engine executes independently of Unity and provides domain behavior for the card catalog and core card actions. Prompt 02 remains NEEDS REVISION until lifecycle/elimination/replay edge cases are implemented and CI passes.
+The card engine runs independently of Unity. Phase 2 implementation is committed on the development branch; final acceptance is pending the latest CI run and review of replay/effect edge cases.
