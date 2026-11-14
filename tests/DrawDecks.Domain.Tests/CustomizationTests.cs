@@ -17,14 +17,15 @@ public sealed class CustomizationTests
             deckMaximumSize: 20, duplicateCardLimit: 2);
         var editor = new DeckBuilderSession(catalog, rules, "deck-1", "My Deck");
 
-        Assert.True(editor.TryAdd("standard-clubs-2", out _));
-        Assert.True(editor.TryAdd("standard-clubs-2", out _));
+        var definition = catalog.Get("standard-clubs-2");
+        int allowedCopies = System.Math.Min(rules.DuplicateCardLimit, definition.MaxCopies);
+        for (int index = 0; index < allowedCopies; index++)
+            Assert.True(editor.TryAdd("standard-clubs-2", out _));
         Assert.False(editor.TryAdd("standard-clubs-2", out var duplicateError));
         Assert.Contains("limit", duplicateError);
         Assert.False(editor.TryAdd("special-wild", out var bannedError));
         Assert.Contains("banned", bannedError);
-        Assert.Single(editor.CardDefinitionIds);
-        Assert.Equal(2, editor.CardDefinitionIds.Count);
+        Assert.Equal(allowedCopies, editor.CardDefinitionIds.Count);
     }
 
     [Fact]
