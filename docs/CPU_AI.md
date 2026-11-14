@@ -47,7 +47,7 @@ Local match setup also exposes:
 - Thinking delay: Fast (0.15s), Standard (0.65s), Slow (1.15s).
 - Evaluation budget: Fast (48 candidates, depth 1), Balanced (96, depth 2), Deep (192, depth 4).
 
-The domain options clamp evaluation budget to 8–256 candidates and planning depth to 1–4.
+The domain options clamp evaluation budget to 8–256 candidates and planning depth to 1–4. The ruleset also has a maximum-turn safety limit (default 500) so non-scoring/deck-recycle loops cannot leave a match active forever; when reached, the engine applies deterministic score/hand sudden-score resolution.
 
 ## Determinism
 
@@ -58,11 +58,13 @@ A CPU decision's random seed is derived from the configured seed (or match seed)
 The test suite covers:
 - Repeatability of Easy decisions for a fixed seed/state.
 - Different Easy choices across seed values and score-first Normal selection.
+- Hard-versus-Normal target selection under conflicting hand-size and score threats.
 - Expert targeting based on observed public opponent actions.
 - The absence of opponent card identities from the opponent observation API.
-- Simulated match completion at Easy, Normal, Hard, and Expert for two, three, and four total seats (up to three CPU seats).
+- 120 seeded match simulations across all four difficulties and two, three, and four total seats (up to three CPU seats).
 - Bounded candidate-evaluation and planning-depth settings.
+- Attack response, skip queue, deck-exhaustion, max-turn, replay, and no-op defensive response regressions.
 
 ## Boundaries
 
-Expert planning is bounded heuristic look-ahead over the acting player's known hand, not full expectimax or hidden-state search. Deck composition awareness is an estimate, not access to the shuffled deck order. CPU difficulty does not change game rules or grant additional information.
+Expert planning is bounded heuristic look-ahead over the acting player's known hand, not full expectimax or hidden-state search. Deck composition awareness is an estimate, not access to the shuffled deck order. CPU difficulty does not change game rules or grant additional information. The max-turn sudden-score fallback is a termination safeguard, not a substitute for the full Confluence Sudden Score final-turn sequence specified by the product rulebook.
