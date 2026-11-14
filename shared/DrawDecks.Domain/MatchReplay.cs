@@ -63,12 +63,17 @@ public static class MatchReplay
                left.MaximumPlayers == right.MaximumPlayers &&
                left.AllowStacking == right.AllowStacking &&
                left.TargetScore == right.TargetScore &&
-               left.MaximumTurns == right.MaximumTurns;
+               left.MaximumTurns == right.MaximumTurns &&
+               left.Mode == right.Mode &&
+               left.StartingHealth == right.StartingHealth &&
+               left.DamagePerHit == right.DamagePerHit &&
+               left.SurvivalMaximumWaves == right.SurvivalMaximumWaves &&
+               left.SurvivalScorePerCpu == right.SurvivalScorePerCpu;
     }
 
     public static bool AreEquivalent(MatchState left, MatchState right)
     {
-        if (!RulesEqual(left.Rules,right.Rules) || left.MatchId != right.MatchId || left.Seed != right.Seed || left.CatalogVersion != right.CatalogVersion || left.Status != right.Status || left.WinnerPlayerId != right.WinnerPlayerId ||
+        if (!RulesEqual(left.Rules,right.Rules) || left.MatchId != right.MatchId || left.Seed != right.Seed || left.CatalogVersion != right.CatalogVersion || left.Status != right.Status || left.WinnerPlayerId != right.WinnerPlayerId || left.WinnerTeamId != right.WinnerTeamId || left.SurvivalWave != right.SurvivalWave || left.SurvivalScore != right.SurvivalScore || left.CpuDefeatedThisWave != right.CpuDefeatedThisWave ||
             left.CurrentPlayer.Id != right.CurrentPlayer.Id || left.TurnNumber != right.TurnNumber ||
             left.DrawPileCount != right.DrawPileCount || left.ActiveSuit != right.ActiveSuit || left.RandomState != right.RandomState || left.Direction != right.Direction || left.DoubleScoreActive != right.DoubleScoreActive || left.BlockedDrawPlayerId != right.BlockedDrawPlayerId || !left.PendingSkipPlayerIds.SetEquals(right.PendingSkipPlayerIds) || left.Events.Count != right.Events.Count || left.TurnHadScoringAction != right.TurnHadScoringAction || !NonScoringCountsEqual(left,right))
             return false;
@@ -82,10 +87,13 @@ public static class MatchReplay
         for (var i = 0; i < left.Players.Count; i++)
         {
             var a = left.Players[i]; var b = right.Players[i];
-            if (a.Id != b.Id || a.Score != b.Score || a.IsEliminated != b.IsEliminated ||
+            if (a.Id != b.Id || a.Score != b.Score || a.Health != b.Health || a.TeamId != b.TeamId || a.IsEliminated != b.IsEliminated ||
                 !a.Hand.Select(c => c.InstanceId).SequenceEqual(b.Hand.Select(c => c.InstanceId)))
                 return false;
         }
+        if (left.TeamScores.Count != right.TeamScores.Count ||
+            left.TeamScores.Any(pair => !right.TeamScores.TryGetValue(pair.Key, out var score) || score != pair.Value))
+            return false;
         return left.DiscardPile.Select(c => c.InstanceId).SequenceEqual(right.DiscardPile.Select(c => c.InstanceId)) && left.DrawPile.Select(c => c.InstanceId).SequenceEqual(right.DrawPile.Select(c => c.InstanceId)) && ((left.PendingAttack == null && right.PendingAttack == null) || (left.PendingAttack != null && right.PendingAttack != null && left.PendingAttack.AttackerId == right.PendingAttack.AttackerId && left.PendingAttack.TargetId == right.PendingAttack.TargetId && left.PendingAttack.Effect == right.PendingAttack.Effect));
     }
 }

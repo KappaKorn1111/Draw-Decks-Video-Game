@@ -1,12 +1,12 @@
 # Draw Decks — Implementation Status
 
-**Current phase:** Phase 4 — CPU Opponents & Intelligent Game AI  
-**Working branch:** dev/foundation  
-**Pull request:** #1 (open; not merged)
+**Current phase:** Phase 5 — Game Modes & Customization Runtime  
+**Working branch:** feature/prompt-05-mode-runtime  
+**Pull request:** #3 (open; not merged)
 
 ## Phase 2 — Shared card system and rules engine
 
-- Versioned catalog with 52 standard cards and all 13 requested action, attack, defense, and special definitions.
+- Versioned catalog with 52 standard cards and 14 action, attack, defense, and special definitions, including Strike damage.
 - Unique physical card instances, rarity, availability, values, suits, ranks, and per-definition copy limits.
 - Deck validation, deterministic seeded shuffle, deal, draw, hand limits, play, discard, reverse direction, skip scheduling, and suit selection.
 - Domain resolution for Draw 2, Swap Hands, Steal, Random Discard, Block Draw, Shield, Reflect, Negate, Wild, Deck Reset, and Double Score.
@@ -72,3 +72,49 @@ Run: https://github.com/KappaKorn1111/Draw-Decks-Video-Game/actions/runs/4356929
 **CI:** PASS — 45/45 tests on commit 8ccf9137c297d59d3f35b18fae603891bdafe205.  
 **Unity runtime acceptance:** PENDING — Editor import, Play Mode CPU matches, UI/hot-seat walkthroughs, and desktop player builds remain required.  
 **Confluence rulebook parity:** NEEDS IMPLEMENTATION — the listed ruleset gaps must be resolved before claiming full product-rulebook compliance.
+
+
+## Prompt 05 — customization foundation
+
+- Added immutable, versioned deck and ruleset profile models.
+- Added deck editing sessions, card catalog search/filtering, deck rarity/effect statistics, and duplicate/banned/allowlist/special/effect validation.
+- Added five named mode presets and configured Classic/Custom match creation validation.
+- Added a storage interface and in-memory implementation for tests and session workflows.
+- Added eight customization regression tests.
+- GitHub Actions run 43572435711 passed: Release build succeeded with 0 warnings and 0 errors; **53 tests passed, 0 failed, 0 skipped**.
+- Elimination, Team Battle, and Survival runtime mechanics; durable local persistence; Unity editor integration; and community sharing/server serialization remain unimplemented.
+
+Prompt 05 acceptance remains **NEEDS REVISION**. See [Customization System](CUSTOMIZATION_SYSTEM.md).
+
+
+## Phase 5 — Game modes and customization runtime
+
+- Added immutable, versioned deck and ruleset profiles, named presets for Classic, Elimination, Team Battle, Survival, and Custom, plus configured-match validation.
+- Added deck editing sessions, card catalog search/filtering, rarity/effect statistics, and duplicate/banned/allowlist/special/effect restrictions.
+- Added player health and Strike damage attacks with Shield, Negate, and Reflect responses. Zero health eliminates a player and triggers mode-specific victory resolution.
+- Elimination uses last-player-standing victory and health-based deterministic safety resolution.
+- Team Battle assigns four seats to two teams, tracks shared team scores, prevents friendly targeted interactions, and supports score- or elimination-based team victory.
+- Survival supports one human versus CPU opponents, wave clearing, CPU respawn, increasing CPU health, survival scoring, deterministic discard recycling, progressive CPU difficulty, and leaderboard-ready result records.
+- Unity setup now selects all five modes. The HUD displays health, team totals, and Survival wave/score state; local Survival best score persists in PlayerPrefs.
+- Added deterministic mode tests for damage, elimination, team assignment/scoring/friendly fire, Survival progression/replay, leaderboard projection, and configured match creation.
+- GitHub Actions run #239 passed on commit 66ae2420bc57180bbcdebd70fcb4f72f420c9a65: Release build had 0 warnings and 0 errors; **63 tests passed, 0 failed, 0 skipped**.
+
+## Remaining acceptance gates
+
+- Unity Editor import, Play Mode, and desktop/mobile player builds still require a licensed Unity workstation or runner; hosted CI only compiles the .NET shared domain/backend.
+- Unity's deck builder remains preset-only; the new domain editor is not yet connected to full deck creation/editing screens.
+- Deck/ruleset persistence is currently represented by the in-memory domain store; durable Unity profile persistence and community/server sharing endpoints are not implemented.
+- Objective-based victory, arbitrary custom card effect parameters, and online leaderboard submission remain future work.
+
+Prompt 05 mode-runtime mechanics are implemented and .NET verified. Overall Prompt 05 acceptance remains **NEEDS REVISION** until the remaining client persistence/editor and Unity verification gates pass.
+
+
+## Phase 5 follow-up — interactive customization and local persistence
+
+- Replaced the preset-only Deck Builder screen with a scrollable catalog editor, per-card quantity controls, named deck profiles, save/load/delete, and deck-size validation (30–120 cards; up to four copies per catalog definition).
+- Added an interactive Custom Rules Editor for mode, target score, starting/max hand, maximum players, starting health, damage per hit, Survival wave limit, and CPU defeat reward. Numeric ranges and hand-limit relationships are checked before saving.
+- Added versioned JSON device-local persistence for deck/rules profiles using PlayerPrefs. Saves retain the previous valid payload as a recovery copy; load falls back to that backup if the active JSON cannot be parsed. Selected profile IDs survive application restarts.
+- Match creation now consumes the selected deck profile and rules profile values. The match setup mode selector remains an explicit override for the selected rules profile's mode.
+- New client source: `client/Assets/Scripts/Gameplay/LocalCustomizationStore.cs`.
+- Unity runtime validation is still pending: no Unity Editor/Play Mode process is available in this execution environment. The hosted .NET workflow does not compile Unity MonoBehaviours.
+- Known acceptance limits: no cloud sync/community sharing; no server persistence; no formal schema migration beyond the current versioned v1 payload and backup fallback; per-card quantity UI uses a four-copy ceiling and should be reconciled with any catalog definition whose configured maximum is lower.

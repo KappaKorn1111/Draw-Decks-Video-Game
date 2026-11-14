@@ -47,6 +47,7 @@ namespace DrawDecks.Client.Gameplay
 
         private int playerCount = 2;
         private int rulesetIndex;
+        private int gameModeIndex;
         private int deckIndex;
         private int timerIndex;
         private string setupMode = "Local Multiplayer";
@@ -64,10 +65,26 @@ namespace DrawDecks.Client.Gameplay
         private int cpuBudgetIndex = 1;
         private Text playerCountLabel;
         private Text rulesetLabel;
+        private Text gameModeLabel;
         private Text deckLabel;
         private Text timerChoiceLabel;
         private Text cpuDelayLabel;
         private Text cpuBudgetLabel;
+        private string activeDeckProfileId;
+        private string activeRulesProfileId;
+        private readonly Dictionary<string, int> deckEditorCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+        private InputField deckProfileNameInput;
+        private InputField rulesProfileNameInput;
+        private InputField targetScoreInput;
+        private InputField startingHandInput;
+        private InputField maximumHandInput;
+        private InputField maximumPlayersInput;
+        private InputField startingHealthInput;
+        private InputField damagePerHitInput;
+        private InputField maximumWavesInput;
+        private InputField survivalRewardInput;
+        private Text rulesModeLabel;
+        private string rulesEditorMode = "CREATE";
 
         private SeatDefinition[] lastSeats;
         private Ruleset lastRules;
@@ -76,6 +93,7 @@ namespace DrawDecks.Client.Gameplay
         private int wins;
         private int losses;
         private int matchesPlayed;
+        private int survivalBestScore;
 
         private static readonly Color Background = new Color(0.035f, 0.055f, 0.085f, 1f);
         private static readonly Color Panel = new Color(0.075f, 0.105f, 0.15f, 1f);
@@ -114,6 +132,10 @@ namespace DrawDecks.Client.Gameplay
         private void Start()
         {
             LoadStatistics();
+            activeDeckProfileId = PlayerPrefs.GetString("DrawDecks.ActiveDeckProfile", string.Empty);
+            activeRulesProfileId = PlayerPrefs.GetString("DrawDecks.ActiveRulesProfile", string.Empty);
+            var activeRules = LocalCustomizationStore.LoadRules().FirstOrDefault(item => item.id == activeRulesProfileId);
+            if (activeRules != null) gameModeIndex = Mathf.Clamp(activeRules.gameMode, 0, 4);
             timerIndex = PlayerPrefs.GetInt("DrawDecks.DefaultTimer", 1) == 1 ? 0 : 2;
             ShowMainMenu();
         }
@@ -403,6 +425,7 @@ namespace DrawDecks.Client.Gameplay
             CreateButton(pageBody, "ONLINE MULTIPLAYER  ·  Coming in a Later Phase", ShowOnlineNotice, 58f);
             var row = CreateRow(pageBody, 58f);
             CreateButton(row, "DECK BUILDER", ShowDeckBuilder, 58f);
+            CreateButton(row, "CUSTOM RULES", ShowRulesEditor, 58f);
             CreateButton(row, "COLLECTION", ShowCollection, 58f);
             CreateButton(row, "STATISTICS", ShowStatistics, 58f);
             var row2 = CreateRow(pageBody, 58f);
@@ -438,8 +461,12 @@ namespace DrawDecks.Client.Gameplay
             {
                 playerCount = Mathf.Clamp(playerCount, 2, 4);
                 slotKinds[0] = SeatKind.Human;
-                if (slotKinds[1] == SeatKind.Human && playerCount == 2) { }
-                else if (slotKinds[1] != SeatKind.Human) slotKinds[1] = SeatKind.Human;
+                if ((GameMode)gameModeIndex != GameMode.TeamBattle &&
+                    (GameMode)gameModeIndex != GameMode.Survival &&
+                    (GameMode)gameModeIndex != GameMode.Elimination)
+                {
+                    if (slotKinds[1] != SeatKind.Human) slotKinds[1] = SeatKind.Human;
+                }
                 slotNames[0] = string.IsNullOrWhiteSpace(slotNames[0]) ? defaultNames[0] : slotNames[0];
                 slotNames[1] = string.IsNullOrWhiteSpace(slotNames[1]) ? defaultNames[1] : slotNames[1];
             }
@@ -453,6 +480,8 @@ namespace DrawDecks.Client.Gameplay
             deckLabel = CreateButton(settingsRow, DeckDisplay(), CycleDeck, 58f)
                 .GetComponentInChildren<Text>();
             timerChoiceLabel = CreateButton(settingsRow, TimerDisplay(), CycleTimer, 58f)
+                .GetComponentInChildren<Text>();
+            gameModeLabel = CreateButton(pageBody, GameModeDisplay(), CycleGameMode, 54f, background: AccentDim)
                 .GetComponentInChildren<Text>();
 
             CreateText(pageBody, "PLAYER SEATS  ·  Tap HUMAN / CPU to change each seat", 17, Gold,
@@ -486,7 +515,7 @@ namespace DrawDecks.Client.Gameplay
                 14, TextMuted, TextAnchor.MiddleCenter, 34f);
 
             CreateText(pageBody, "Rulesets: Classic (100 points), Quick Match (50), Marathon (150). " +
-                "Deck presets: Confluence Standard (52 standard + 13 effect cards) or Classic 52. " +
+                "Deck presets: Confluence Standard (52 standard + 14 effect definitions) or Classic 52. " +
                 "Effect stacking is disabled in this ruleset.", 14, TextMuted, TextAnchor.MiddleCenter, 44f);
             CreateButton(pageBody, "START MATCH", StartMatchFromSetup, 66f, background: AccentDim);
             CreateButton(pageBody, "BACK TO MAIN MENU", ShowMainMenu, 52f);
@@ -494,20 +523,58 @@ namespace DrawDecks.Client.Gameplay
 
         private void CyclePlayerCount()
         {
-            playerCount = playerCount >= 4 ? 2 : playerCount + 1;
+            if ((GameMode)gameModeIndex == GameMode.TeamBattle)
+                playerCount = 4;
+            else
+                playerCount = playerCount >= 4 ? 2 : playerCount + 1;
             if (playerCountLabel != null) playerCountLabel.text = "Players: " + playerCount;
             for (int i = 0; i < setupSeatRows.Length; i++)
                 if (setupSeatRows[i] != null) setupSeatRows[i].gameObject.SetActive(i < playerCount);
         }
 
+        private string GameModeDisplay()
+        {
+            return "MODE: " + ((GameMode)gameModeIndex).ToString().ToUpperInvariant() + "  ·  TAP TO CHANGE";
+        }
+
+        private void CycleGameMode()
+        {
+            gameModeIndex = (gameModeIndex + 1) % 5;
+            var mode = (GameMode)gameModeIndex;
+            if (mode == GameMode.TeamBattle)
+            {
+                playerCount = 4;
+                slotKinds[0] = SeatKind.Human; slotKinds[1] = SeatKind.Cpu;
+                slotKinds[2] = SeatKind.Human; slotKinds[3] = SeatKind.Cpu;
+            }
+            else if (mode == GameMode.Survival)
+            {
+                playerCount = 4;
+                slotKinds[0] = SeatKind.Human;
+                for (int i = 1; i < 4; i++) slotKinds[i] = SeatKind.Cpu;
+            }
+            else if (mode == GameMode.Elimination)
+            {
+                playerCount = Mathf.Clamp(playerCount, 2, 4);
+                slotKinds[0] = SeatKind.Human;
+                for (int i = 1; i < playerCount; i++) slotKinds[i] = SeatKind.Cpu;
+            }
+            if (gameModeLabel != null) gameModeLabel.text = GameModeDisplay();
+            ShowMatchSetup(false);
+        }
+
         private string RulesetDisplay()
         {
-            return new[] { "Rules: Classic 100", "Rules: Quick 50", "Rules: Marathon 150" }[rulesetIndex % 3];
+            var profile = LocalCustomizationStore.LoadRules().FirstOrDefault(item => item.id == activeRulesProfileId);
+            return profile == null
+                ? new[] { "Rules: Classic 100", "Rules: Quick 50", "Rules: Marathon 150" }[rulesetIndex % 3]
+                : "Rules: " + profile.name;
         }
 
         private string DeckDisplay()
         {
-            return deckIndex % 2 == 0 ? "Deck: Confluence 65" : "Deck: Classic 52";
+            var profile = LocalCustomizationStore.LoadDecks().FirstOrDefault(item => item.id == activeDeckProfileId);
+            return profile == null ? (deckIndex % 2 == 0 ? "Deck: Confluence 65" : "Deck: Classic 52") : "Deck: " + profile.name;
         }
 
         private string TimerDisplay()
@@ -586,16 +653,45 @@ namespace DrawDecks.Client.Gameplay
         private Ruleset BuildSelectedRules()
         {
             int target = rulesetIndex == 1 ? 50 : rulesetIndex == 2 ? 150 : 100;
-            return new Ruleset(startingHandSize: 5, maximumHandSize: 7, maximumPlayers: playerCount,
-                allowStacking: false, targetScore: target);
+            GameMode mode = (GameMode)gameModeIndex;
+            int startingHand = 5, maximumHand = 7, maximumPlayers = mode == GameMode.TeamBattle ? 4 : playerCount;
+            int startingHealth = 20, damage = 5, maximumWaves = 0, survivalReward = 10;
+            bool stacking = false;
+
+            var profile = LocalCustomizationStore.LoadRules().FirstOrDefault(item => item.id == activeRulesProfileId);
+            if (profile != null)
+            {
+                target = profile.targetScore;
+                startingHand = profile.startingHandSize;
+                maximumHand = profile.maximumHandSize;
+                maximumPlayers = mode == GameMode.TeamBattle ? 4 : Mathf.Clamp(profile.maximumPlayers, 2, 4);
+                startingHealth = profile.startingHealth;
+                damage = profile.damagePerHit;
+                maximumWaves = profile.survivalMaximumWaves;
+                survivalReward = profile.survivalScorePerCpu;
+                stacking = profile.allowStacking;
+            }
+            return new Ruleset(startingHandSize: startingHand, maximumHandSize: maximumHand,
+                maximumPlayers: maximumPlayers, allowStacking: stacking, targetScore: target,
+                mode: mode, startingHealth: startingHealth, damagePerHit: damage,
+                survivalMaximumWaves: maximumWaves, survivalScorePerCpu: survivalReward);
         }
 
         private string[] BuildDeckIds()
         {
+            var saved = LocalCustomizationStore.LoadDecks().FirstOrDefault(item => item.id == activeDeckProfileId);
+            if (saved != null && saved.cardIds != null && saved.cardIds.Length >= 10)
+                return saved.cardIds.Where(id => catalog.Definitions.Any(definition => definition.Id == id)).ToArray();
+
             IEnumerable<CardDefinition> definitions = catalog.Definitions;
             if (deckIndex % 2 == 1)
                 definitions = definitions.Where(d => d.Kind == CardKind.Standard);
-            return definitions.Select(d => d.Id).ToArray();
+            var ids = definitions.Select(d => d.Id).Where(id => id != "attack-damage").ToList();
+            if ((GameMode)gameModeIndex == GameMode.Elimination ||
+                (GameMode)gameModeIndex == GameMode.TeamBattle ||
+                (GameMode)gameModeIndex == GameMode.Survival)
+                for (int copy = 0; copy < 4; copy++) ids.Add("attack-damage");
+            return ids.ToArray();
         }
 
         private void StartMatchFromSetup()
@@ -615,6 +711,17 @@ namespace DrawDecks.Client.Gameplay
             if (playerCount < 2 || playerCount > MaxSeats)
             {
                 ShowNoticePage("A local match requires 2–4 total seats.");
+                return;
+            }
+            if ((GameMode)gameModeIndex == GameMode.TeamBattle && playerCount != 4)
+            {
+                ShowNoticePage("Team Battle requires exactly four seats. Select four players.");
+                return;
+            }
+            if ((GameMode)gameModeIndex == GameMode.Survival &&
+                (slotKinds[0] != SeatKind.Human || slotKinds.Skip(1).Take(playerCount - 1).Any(kind => kind != SeatKind.Cpu)))
+            {
+                ShowNoticePage("Survival requires one human survivor in seat 1 and CPU opponents in all other seats.");
                 return;
             }
 
@@ -738,7 +845,10 @@ namespace DrawDecks.Client.Gameplay
             var current = match.CurrentPlayer;
             BeginPage("Draw Decks  ·  Match", current.DisplayName + " is active. Select a card to inspect its legal action.");
             var topRow = CreateRow(pageBody, 52f);
-            CreateText(topRow, "TURN " + match.TurnNumber, 17, Gold, TextAnchor.MiddleCenter, 48f);
+            string modeStatus = match.Rules.Mode == GameMode.Survival
+                ? "WAVE " + match.SurvivalWave + "  ·  SURVIVAL " + match.SurvivalScore
+                : "TURN " + match.TurnNumber;
+            CreateText(topRow, modeStatus, 17, Gold, TextAnchor.MiddleCenter, 48f);
             timerText = CreateText(topRow, turnTimeSeconds <= 0f ? "TURN TIMER  OFF" :
                 "TURN TIMER  " + Mathf.CeilToInt(turnTimeRemaining) + "s", 17, TextPrimary, TextAnchor.MiddleCenter, 48f);
             CreateButton(topRow, "PAUSE", ShowPauseMenu, 48f, 150f);
@@ -750,11 +860,22 @@ namespace DrawDecks.Client.Gameplay
                 string cpuLevel = player.Kind == SeatKind.Cpu && cpuDifficulties.ContainsKey(player.Id)
                     ? " / " + cpuDifficulties[player.Id].ToString().ToUpperInvariant()
                     : "";
-                scoreboard.Add(player.DisplayName + "  ·  " + status + cpuLevel + "  ·  " + player.Score +
+                string health = (match.Rules.Mode == GameMode.Elimination ||
+                    match.Rules.Mode == GameMode.TeamBattle || match.Rules.Mode == GameMode.Survival)
+                    ? "  ·  " + player.Health + " HP" : "";
+                string team = match.Rules.Mode == GameMode.TeamBattle ? "  ·  " + player.TeamId : "";
+                scoreboard.Add(player.DisplayName + team + "  ·  " + status + cpuLevel + health + "  ·  " + player.Score +
                     " pts  ·  " + player.Hand.Count + " cards");
             }
             CreateText(pageBody, string.Join("     |     ", scoreboard), 17, TextPrimary,
-                TextAnchor.MiddleCenter, 58f);
+                TextAnchor.MiddleCenter, 72f);
+            if (match.Rules.Mode == GameMode.TeamBattle)
+                CreateText(pageBody, "TEAM SCORE  ·  " + string.Join("     |     ",
+                    match.TeamScores.Select(pair => pair.Key + "  " + pair.Value + " pts")),
+                    17, Gold, TextAnchor.MiddleCenter, 36f);
+            if (match.Rules.Mode == GameMode.Survival)
+                CreateText(pageBody, "SURVIVAL PROGRESS  ·  " + match.CpuDefeatedThisWave +
+                    " CPU OPPONENTS DEFEATED THIS WAVE", 15, Accent, TextAnchor.MiddleCenter, 32f);
             var opponentHands = match.Players.Where(p => p.Id != current.Id && !p.IsEliminated)
                 .Select(p => p.DisplayName + "  ·  FACE-DOWN × " + p.Hand.Count);
             CreateText(pageBody, "OPPONENT HANDS  ·  " + string.Join("     |     ", opponentHands), 14,
@@ -871,7 +992,7 @@ namespace DrawDecks.Client.Gameplay
         private static bool NeedsTarget(CardEffect effect)
         {
             return effect == CardEffect.StealCard || effect == CardEffect.DiscardRandomCard ||
-                   effect == CardEffect.BlockDraw || effect == CardEffect.SkipTurn ||
+                   effect == CardEffect.BlockDraw || effect == CardEffect.Damage || effect == CardEffect.SkipTurn ||
                    effect == CardEffect.SwapHands;
         }
 
@@ -884,7 +1005,8 @@ namespace DrawDecks.Client.Gameplay
         private string GetSelectedTargetId()
         {
             if (match == null) return null;
-            var available = match.Players.Where(p => p.Id != match.CurrentPlayer.Id && !p.IsEliminated).ToList();
+            var available = match.Players.Where(p => p.Id != match.CurrentPlayer.Id && !p.IsEliminated &&
+                (match.Rules.Mode != GameMode.TeamBattle || p.TeamId != match.CurrentPlayer.TeamId)).ToList();
             if (available.Count == 0) return null;
             if (!string.IsNullOrEmpty(selectedTargetId) && available.Any(p => p.Id == selectedTargetId))
                 return selectedTargetId;
@@ -894,7 +1016,8 @@ namespace DrawDecks.Client.Gameplay
 
         private void CycleTarget()
         {
-            var available = match.Players.Where(p => p.Id != match.CurrentPlayer.Id && !p.IsEliminated).ToList();
+            var available = match.Players.Where(p => p.Id != match.CurrentPlayer.Id && !p.IsEliminated &&
+                (match.Rules.Mode != GameMode.TeamBattle || p.TeamId != match.CurrentPlayer.TeamId)).ToList();
             if (available.Count == 0) return;
             int index = available.FindIndex(p => p.Id == selectedTargetId);
             selectedTargetId = available[(index + 1) % available.Count].Id;
@@ -1000,7 +1123,10 @@ namespace DrawDecks.Client.Gameplay
 
         private float CpuThinkingDelaySeconds()
         {
-            return new[] { 0.15f, 0.65f, 1.15f }[cpuDelayIndex % 3];
+            float delay = new[] { 0.15f, 0.65f, 1.15f }[cpuDelayIndex % 3];
+            if (match != null && match.Rules.Mode == GameMode.Survival)
+                delay = Mathf.Max(0.08f, delay - (match.SurvivalWave - 1) * 0.04f);
+            return delay;
         }
 
         private CpuAiOptions BuildCpuAiOptions(string playerId, bool hasDrawn)
@@ -1008,6 +1134,9 @@ namespace DrawDecks.Client.Gameplay
             CpuDifficulty difficulty = cpuDifficulties.TryGetValue(playerId, out var value)
                 ? value
                 : CpuDifficulty.Normal;
+            if (match != null && match.Rules.Mode == GameMode.Survival)
+                difficulty = (CpuDifficulty)Mathf.Min((int)CpuDifficulty.Expert,
+                    (int)difficulty + Mathf.Max(0, (match.SurvivalWave - 1) / 2));
             int[] budgets = { 48, 96, 192 };
             int[] depths = { 1, 2, 4 };
             return new CpuAiOptions(
@@ -1138,11 +1267,14 @@ namespace DrawDecks.Client.Gameplay
         private string NextLivingSeatId(string playerId)
         {
             int index = match.Players.ToList().FindIndex(p => p.Id == playerId);
+            var actor = match.Players[index];
             for (int step = 1; step <= match.Players.Count; step++)
             {
                 int candidate = (index + (match.TurnDirection * step) + match.Players.Count * 2) % match.Players.Count;
-                if (!match.Players[candidate].IsEliminated && match.Players[candidate].Id != playerId)
-                    return match.Players[candidate].Id;
+                var target = match.Players[candidate];
+                if (!target.IsEliminated && target.Id != playerId &&
+                    (match.Rules.Mode != GameMode.TeamBattle || target.TeamId != actor.TeamId))
+                    return target.Id;
             }
             return null;
         }
@@ -1177,17 +1309,42 @@ namespace DrawDecks.Client.Gameplay
             if (resultsRecorded) return;
             resultsRecorded = true;
             matchesPlayed++;
+            if (match.Rules.Mode == GameMode.Survival)
+            {
+                var survivor = match.Players.FirstOrDefault(player => player.Kind == SeatKind.Human);
+                if (survivor != null)
+                {
+                    var leaderboardEntry = SurvivalLeaderboardEntry.FromCompletedMatch(match, survivor.Id);
+                    survivalBestScore = Mathf.Max(survivalBestScore, leaderboardEntry.Score);
+                }
+            }
             var winner = match.WinnerPlayerId == null ? null : match.Players.FirstOrDefault(p => p.Id == match.WinnerPlayerId);
-            if (winner != null && winner.Kind == SeatKind.Human) wins++;
-            else if (winner != null) losses++;
+            bool humanTeamWon = match.WinnerTeamId != null &&
+                match.Players.Any(player => player.Kind == SeatKind.Human && player.TeamId == match.WinnerTeamId);
+            if ((winner != null && winner.Kind == SeatKind.Human) || humanTeamWon) wins++;
+            else if (winner != null || match.WinnerTeamId != null ||
+                (match.Rules.Mode == GameMode.Survival && match.Status == MatchStatus.Completed)) losses++;
             SaveStatistics();
 
-            BeginPage("Match Results", match.Status == MatchStatus.Draw ? "The match ended in a draw." :
-                (winner == null ? "Match completed." : winner.DisplayName + " wins the match."));
-            CreateText(pageBody, winner == null ? "DRAW" : winner.DisplayName.ToUpperInvariant() + "  ·  WINNER",
+            string winnerText = match.WinnerTeamId != null ? match.WinnerTeamId.ToUpperInvariant() + " WINS" :
+                winner == null ? (match.Rules.Mode == GameMode.Survival && match.Status == MatchStatus.Completed ? "SURVIVAL RUN ENDED" : "DRAW") :
+                winner.DisplayName + " wins the match.";
+            BeginPage("Match Results", winnerText);
+            CreateText(pageBody, match.WinnerTeamId != null ? winnerText :
+                winner == null ? (match.Rules.Mode == GameMode.Survival ? "SURVIVAL SCORE  ·  " + match.SurvivalScore : "DRAW") :
+                winner.DisplayName.ToUpperInvariant() + "  ·  WINNER",
                 32, Gold, TextAnchor.MiddleCenter, 78f, style: FontStyle.Bold);
+            if (match.Rules.Mode == GameMode.Survival)
+                CreateText(pageBody, "WAVES CLEARED  ·  " + match.SurvivalWave +
+                    "     ·     SURVIVAL SCORE  ·  " + match.SurvivalScore +
+                    "     ·     PERSONAL BEST  ·  " + survivalBestScore,
+                    20, Accent, TextAnchor.MiddleCenter, 48f);
+            if (match.Rules.Mode == GameMode.TeamBattle)
+                CreateText(pageBody, "TEAM SCORES  ·  " + string.Join("     |     ",
+                    match.TeamScores.Select(pair => pair.Key + "  " + pair.Value)),
+                    18, Gold, TextAnchor.MiddleCenter, 44f);
             CreateText(pageBody, string.Join("\n", match.Players.Select(p =>
-                p.DisplayName + "  ·  " + p.Score + " points  ·  " + p.Hand.Count + " cards remaining" +
+                p.DisplayName + "  ·  " + p.Score + " points  ·  " + p.Health + " HP  ·  " + p.Hand.Count + " cards remaining" +
                 (p.IsEliminated ? "  ·  ELIMINATED" : ""))), 20, TextPrimary, TextAnchor.MiddleCenter, 150f);
             CreateText(pageBody, "Turns: " + match.TurnNumber + "  ·  Events: " + match.Events.Count +
                 "  ·  Seed: " + match.Seed, 15, TextMuted, TextAnchor.MiddleCenter, 38f);
@@ -1207,24 +1364,277 @@ namespace DrawDecks.Client.Gameplay
 
         private void ShowDeckBuilder()
         {
-            BeginPage("Deck Builder", "Select a supported deck preset for your next local match.");
-            CreateText(pageBody, "CONFLUENCE STANDARD", 22, Gold, TextAnchor.MiddleCenter, 44f, style: FontStyle.Bold);
-            CreateText(pageBody, "65 cards · 52 standard cards plus 13 action, attack, defense, and special cards. " +
-                "Each catalog definition is limited to its configured copy count.", 17, TextPrimary, TextAnchor.MiddleCenter, 92f);
-            CreateButton(pageBody, "USE CONFLUENCE STANDARD", () =>
+            var saved = LocalCustomizationStore.LoadDecks();
+            var active = saved.FirstOrDefault(item => item.id == activeDeckProfileId);
+            deckEditorCounts.Clear();
+            if (active != null)
+                foreach (var id in active.cardIds) deckEditorCounts[id] = deckEditorCounts.TryGetValue(id, out int count) ? count + 1 : 1;
+            else
+                foreach (var id in BuildDefaultDeckForEditor()) deckEditorCounts[id] = deckEditorCounts.TryGetValue(id, out int count) ? count + 1 : 1;
+
+            BeginPage("Deck Builder", "Create a named deck, edit per-card quantities, select a saved deck, and persist it on this device.");
+            var top = CreateRow(pageBody, 58f);
+            deckProfileNameInput = CreateInput(top, active == null ? "My Custom Deck" : active.name, 420f);
+            CreateButton(top, "SAVE DECK", SaveDeckEditor, 56f, background: AccentDim);
+            CreateButton(top, "NEW", () => { activeDeckProfileId = null; ShowDeckBuilder(); }, 56f);
+            int total = deckEditorCounts.Values.Sum();
+            int unique = deckEditorCounts.Count(pair => pair.Value > 0);
+            CreateText(pageBody, "DECK SIZE  ·  " + total + " CARDS     ·     UNIQUE DEFINITIONS  ·  " + unique +
+                "     ·     TARGET 30–120 CARDS", 16, Gold, TextAnchor.MiddleCenter, 34f);
+
+            var savedRow = CreateRow(pageBody, 54f);
+            CreateText(savedRow, "SAVED DECKS", 15, TextMuted, TextAnchor.MiddleCenter, 48f, sizeDelta: new Vector2(140f, 48f));
+            foreach (var profile in saved.Take(4))
+                CreateButton(savedRow, profile.name, () => LoadDeckProfile(profile.id), 48f, preferredWidth: 190f);
+            if (saved.Count > 0)
+                CreateButton(savedRow, "DELETE ACTIVE", DeleteActiveDeck, 48f, preferredWidth: 170f, background: Danger);
+
+            var scroll = CreateEditorScroll(pageBody, 430f);
+            foreach (var definition in catalog.Definitions.OrderBy(item => item.Kind).ThenBy(item => item.Name))
             {
+                var row = CreateRow(scroll, 48f, 8f);
+                int quantity = deckEditorCounts.TryGetValue(definition.Id, out int count) ? count : 0;
+                CreateText(row, definition.Name + "  ·  " + definition.Kind + "  ·  " + definition.Rarity,
+                    14, TextPrimary, TextAnchor.MiddleLeft, 44f);
+                CreateButton(row, "−", () => ChangeDeckQuantity(definition.Id, -1), 44f, 52f);
+                CreateText(row, quantity.ToString(), 16, Gold, TextAnchor.MiddleCenter, 44f, sizeDelta: new Vector2(44f, 44f));
+                CreateButton(row, "+", () => ChangeDeckQuantity(definition.Id, 1), 44f, 52f, background: AccentDim);
+            }
+            CreateButton(pageBody, "BACK TO MENU", ShowMainMenu, 50f);
+        }
+
+        private IEnumerable<string> BuildDefaultDeckForEditor()
+        {
+            return catalog.Definitions.Select(definition => definition.Id).Where(id => id != "attack-damage");
+        }
+
+        private Transform CreateEditorScroll(Transform parent, float height)
+        {
+            var root = new GameObject("Profile Editor Scroll", typeof(RectTransform), typeof(Image),
+                typeof(ScrollRect), typeof(LayoutElement));
+            root.transform.SetParent(parent, false);
+            root.GetComponent<Image>().color = new Color(0.045f, 0.065f, 0.09f, 1f);
+            var element = root.GetComponent<LayoutElement>();
+            element.minHeight = height;
+            element.preferredHeight = height;
+            element.flexibleWidth = 1f;
+
+            var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+            viewport.transform.SetParent(root.transform, false);
+            Stretch(viewport.GetComponent<RectTransform>());
+            viewport.GetComponent<Image>().color = Color.white;
+            viewport.GetComponent<Image>().enabled = false;
+            viewport.GetComponent<Mask>().showMaskGraphic = false;
+
+            var content = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup),
+                typeof(ContentSizeFitter));
+            content.transform.SetParent(viewport.transform, false);
+            var contentRect = content.GetComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0f, 1f);
+            contentRect.anchorMax = new Vector2(1f, 1f);
+            contentRect.pivot = new Vector2(0.5f, 1f);
+            contentRect.anchoredPosition = Vector2.zero;
+            contentRect.sizeDelta = Vector2.zero;
+            var layout = content.GetComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(10, 10, 8, 8);
+            layout.spacing = 5f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            content.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var scroll = root.GetComponent<ScrollRect>();
+            scroll.viewport = viewport.GetComponent<RectTransform>();
+            scroll.content = contentRect;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            return content.transform;
+        }
+
+        private void ChangeDeckQuantity(string cardId, int delta)
+        {
+            int current = deckEditorCounts.TryGetValue(cardId, out int count) ? count : 0;
+            int next = Mathf.Clamp(current + delta, 0, 4);
+            if (next == 0) deckEditorCounts.Remove(cardId);
+            else deckEditorCounts[cardId] = next;
+            ShowDeckBuilder();
+        }
+
+        private void SaveDeckEditor()
+        {
+            string name = deckProfileNameInput == null ? "My Custom Deck" : deckProfileNameInput.text.Trim();
+            string[] cards = deckEditorCounts.SelectMany(pair => Enumerable.Repeat(pair.Key, pair.Value)).ToArray();
+            if (string.IsNullOrWhiteSpace(name) || cards.Length < 30 || cards.Length > 120)
+            {
+                ShowNoticePage("Deck save rejected. Enter a name and configure between 30 and 120 cards. Each catalog definition is limited to four copies.");
+                return;
+            }
+            var profile = new LocalDeckProfile
+            {
+                id = string.IsNullOrWhiteSpace(activeDeckProfileId) ? Guid.NewGuid().ToString("N") : activeDeckProfileId,
+                name = name,
+                cardIds = cards
+            };
+            try
+            {
+                LocalCustomizationStore.SaveDeck(profile);
+                activeDeckProfileId = profile.id;
+                PlayerPrefs.SetString("DrawDecks.ActiveDeckProfile", activeDeckProfileId);
+                PlayerPrefs.Save();
                 deckIndex = 0;
-                ShowNoticePage("Confluence Standard is selected for the next match.");
-            }, 58f, background: AccentDim);
-            CreateText(pageBody, "CLASSIC 52", 22, Gold, TextAnchor.MiddleCenter, 44f, style: FontStyle.Bold);
-            CreateText(pageBody, "52 standard cards · Four suits · Ranks 2 through Ace. " +
-                "No effect cards are included in this preset.", 17, TextPrimary, TextAnchor.MiddleCenter, 72f);
-            CreateButton(pageBody, "USE CLASSIC 52", () =>
+                ShowNoticePage("Deck saved locally: " + profile.name + " (" + cards.Length + " cards). It is now selected for new matches.");
+            }
+            catch (Exception exception)
             {
-                deckIndex = 1;
-                ShowNoticePage("Classic 52 is selected for the next match.");
-            }, 58f);
-            CreateButton(pageBody, "BACK", ShowMainMenu, 52f);
+                Debug.LogException(exception);
+                ShowNoticePage("Deck could not be saved: " + exception.Message);
+            }
+        }
+
+        private void LoadDeckProfile(string id)
+        {
+            var profile = LocalCustomizationStore.LoadDecks().FirstOrDefault(item => item.id == id);
+            if (profile == null) { ShowNoticePage("That saved deck is unavailable or invalid."); return; }
+            activeDeckProfileId = profile.id;
+            PlayerPrefs.SetString("DrawDecks.ActiveDeckProfile", activeDeckProfileId);
+            PlayerPrefs.Save();
+            ShowDeckBuilder();
+        }
+
+        private void DeleteActiveDeck()
+        {
+            if (string.IsNullOrWhiteSpace(activeDeckProfileId))
+            {
+                ShowNoticePage("Select a saved deck before deleting it.");
+                return;
+            }
+            LocalCustomizationStore.DeleteDeck(activeDeckProfileId);
+            activeDeckProfileId = null;
+            PlayerPrefs.DeleteKey("DrawDecks.ActiveDeckProfile");
+            PlayerPrefs.Save();
+            ShowDeckBuilder();
+        }
+
+        private void ShowRulesEditor()
+        {
+            var saved = LocalCustomizationStore.LoadRules();
+            var active = saved.FirstOrDefault(item => item.id == activeRulesProfileId);
+            if (active == null)
+                active = new LocalRulesProfile { id = Guid.NewGuid().ToString("N"), name = "My Custom Rules" };
+            rulesEditorMode = ((GameMode)Mathf.Clamp(active.gameMode, 0, 4)).ToString().ToUpperInvariant();
+            BeginPage("Custom Rules Editor", "Configure match mode, scoring, health, hand limits, seat count, and Survival progression. Values are validated before saving.");
+            rulesProfileNameInput = CreateEditorField(pageBody, "PROFILE NAME", active.name);
+            rulesModeLabel = CreateButton(pageBody, "GAME MODE  ·  " + rulesEditorMode + "  ·  TAP TO CYCLE",
+                CycleRulesEditorMode, 54f, background: AccentDim).GetComponentInChildren<Text>();
+            targetScoreInput = CreateEditorField(pageBody, "TARGET SCORE (10–1000)", active.targetScore.ToString());
+            startingHandInput = CreateEditorField(pageBody, "STARTING HAND (1–20)", active.startingHandSize.ToString());
+            maximumHandInput = CreateEditorField(pageBody, "MAXIMUM HAND (STARTING HAND–40)", active.maximumHandSize.ToString());
+            maximumPlayersInput = CreateEditorField(pageBody, "MAXIMUM PLAYERS (2–4)", active.maximumPlayers.ToString());
+            startingHealthInput = CreateEditorField(pageBody, "STARTING HEALTH (1–500)", active.startingHealth.ToString());
+            damagePerHitInput = CreateEditorField(pageBody, "DAMAGE PER HIT (1–100)", active.damagePerHit.ToString());
+            maximumWavesInput = CreateEditorField(pageBody, "SURVIVAL MAX WAVES (0 = ENDLESS)", active.survivalMaximumWaves.ToString());
+            survivalRewardInput = CreateEditorField(pageBody, "SURVIVAL CPU REWARD (0–1000)", active.survivalScorePerCpu.ToString());
+            CreateButton(pageBody, "SAVE CUSTOM RULESET", SaveRulesEditor, 62f, background: AccentDim);
+            var savedRow = CreateRow(pageBody, 52f);
+            foreach (var profile in saved.Take(4))
+                CreateButton(savedRow, profile.name, () => LoadRulesProfile(profile.id), 48f, preferredWidth: 200f);
+            if (activeRulesProfileId != null)
+                CreateButton(savedRow, "DELETE ACTIVE", DeleteActiveRules, 48f, preferredWidth: 160f, background: Danger);
+            CreateButton(pageBody, "BACK TO MENU", ShowMainMenu, 50f);
+        }
+
+        private InputField CreateEditorField(Transform parent, string label, string value)
+        {
+            var row = CreateRow(parent, 54f);
+            CreateText(row, label, 14, TextMuted, TextAnchor.MiddleLeft, 50f, sizeDelta: new Vector2(370f, 50f));
+            return CreateInput(row, value, 260f);
+        }
+
+        private void CycleRulesEditorMode()
+        {
+            int next = ((int)Enum.Parse(typeof(GameMode), rulesEditorMode, true) + 1) % 5;
+            rulesEditorMode = ((GameMode)next).ToString().ToUpperInvariant();
+            if (rulesModeLabel != null) rulesModeLabel.text = "GAME MODE  ·  " + rulesEditorMode + "  ·  TAP TO CYCLE";
+        }
+
+        private bool TryReadRange(InputField input, int minimum, int maximum, out int value)
+        {
+            value = 0;
+            return input != null && int.TryParse(input.text, out value) && value >= minimum && value <= maximum;
+        }
+
+        private void SaveRulesEditor()
+        {
+            int target, startingHand, maximumHand, players, health, damage, waves, reward;
+            bool valid = TryReadRange(targetScoreInput, 10, 1000, out target) &&
+                TryReadRange(startingHandInput, 1, 20, out startingHand) &&
+                TryReadRange(maximumHandInput, startingHand, 40, out maximumHand) &&
+                TryReadRange(maximumPlayersInput, 2, 4, out players) &&
+                TryReadRange(startingHealthInput, 1, 500, out health) &&
+                TryReadRange(damagePerHitInput, 1, 100, out damage) &&
+                TryReadRange(maximumWavesInput, 0, 1000, out waves) &&
+                TryReadRange(survivalRewardInput, 0, 1000, out reward);
+            string name = rulesProfileNameInput == null ? "" : rulesProfileNameInput.text.Trim();
+            if (!valid || string.IsNullOrWhiteSpace(name))
+            {
+                ShowNoticePage("Ruleset save rejected. Check the profile name and every numeric range; maximum hand must be at least starting hand.");
+                return;
+            }
+            var profile = new LocalRulesProfile
+            {
+                id = string.IsNullOrWhiteSpace(activeRulesProfileId) ? Guid.NewGuid().ToString("N") : activeRulesProfileId,
+                name = name,
+                gameMode = (int)Enum.Parse(typeof(GameMode), rulesEditorMode, true),
+                targetScore = target,
+                startingHandSize = startingHand,
+                maximumHandSize = maximumHand,
+                maximumPlayers = players,
+                startingHealth = health,
+                damagePerHit = damage,
+                survivalMaximumWaves = waves,
+                survivalScorePerCpu = reward,
+                allowStacking = false
+            };
+            try
+            {
+                LocalCustomizationStore.SaveRules(profile);
+                activeRulesProfileId = profile.id;
+                PlayerPrefs.SetString("DrawDecks.ActiveRulesProfile", activeRulesProfileId);
+                PlayerPrefs.Save();
+                gameModeIndex = profile.gameMode;
+                ShowNoticePage("Custom ruleset saved locally: " + profile.name + ". It is selected for new matches.");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                ShowNoticePage("Ruleset could not be saved: " + exception.Message);
+            }
+        }
+
+        private void LoadRulesProfile(string id)
+        {
+            var profile = LocalCustomizationStore.LoadRules().FirstOrDefault(item => item.id == id);
+            if (profile == null) { ShowNoticePage("That saved ruleset is unavailable or invalid."); return; }
+            activeRulesProfileId = profile.id;
+            PlayerPrefs.SetString("DrawDecks.ActiveRulesProfile", activeRulesProfileId);
+            PlayerPrefs.Save();
+            gameModeIndex = Mathf.Clamp(profile.gameMode, 0, 4);
+            ShowRulesEditor();
+        }
+
+        private void DeleteActiveRules()
+        {
+            if (string.IsNullOrWhiteSpace(activeRulesProfileId))
+            {
+                ShowNoticePage("Select a saved ruleset before deleting it.");
+                return;
+            }
+            LocalCustomizationStore.DeleteRules(activeRulesProfileId);
+            activeRulesProfileId = null;
+            PlayerPrefs.DeleteKey("DrawDecks.ActiveRulesProfile");
+            PlayerPrefs.Save();
+            ShowRulesEditor();
         }
 
         private void ShowCollection()
@@ -1244,6 +1654,7 @@ namespace DrawDecks.Client.Gameplay
             CreateText(pageBody, "MATCHES PLAYED  ·  " + matchesPlayed, 24, Gold, TextAnchor.MiddleCenter, 58f);
             CreateText(pageBody, "HUMAN WINS  ·  " + wins, 22, TextPrimary, TextAnchor.MiddleCenter, 52f);
             CreateText(pageBody, "HUMAN LOSSES  ·  " + losses, 22, TextPrimary, TextAnchor.MiddleCenter, 52f);
+            CreateText(pageBody, "SURVIVAL BEST  ·  " + survivalBestScore, 22, Gold, TextAnchor.MiddleCenter, 52f);
             CreateText(pageBody, "WIN RATE  ·  " + (matchesPlayed == 0 ? "—" :
                 (100f * wins / matchesPlayed).ToString("0.0") + "%"), 22, Accent, TextAnchor.MiddleCenter, 52f);
             CreateButton(pageBody, "BACK", ShowMainMenu, 52f);
@@ -1296,6 +1707,7 @@ namespace DrawDecks.Client.Gameplay
             matchesPlayed = PlayerPrefs.GetInt("DrawDecks.Matches", 0);
             wins = PlayerPrefs.GetInt("DrawDecks.Wins", 0);
             losses = PlayerPrefs.GetInt("DrawDecks.Losses", 0);
+            survivalBestScore = PlayerPrefs.GetInt("DrawDecks.SurvivalBest", 0);
         }
 
         private void SaveStatistics()
@@ -1303,6 +1715,7 @@ namespace DrawDecks.Client.Gameplay
             PlayerPrefs.SetInt("DrawDecks.Matches", matchesPlayed);
             PlayerPrefs.SetInt("DrawDecks.Wins", wins);
             PlayerPrefs.SetInt("DrawDecks.Losses", losses);
+            PlayerPrefs.SetInt("DrawDecks.SurvivalBest", survivalBestScore);
             PlayerPrefs.Save();
         }
     }

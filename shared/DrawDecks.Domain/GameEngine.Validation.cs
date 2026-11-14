@@ -19,7 +19,9 @@ namespace DrawDecks.Domain
             if (state.BlockedDrawPlayerId == playerId) return ActionError.None;
             if (state.CurrentPlayer.Hand.Count + count > state.Rules.MaximumHandSize)
                 return ActionError.HandLimitReached;
-            if (state.DrawPileCount < count) return ActionError.DeckEmpty;
+            int availableCards = state.DrawPileCount +
+                (state.Rules.Mode == GameMode.Survival ? state.DiscardPile.Count : 0);
+            if (availableCards < count) return ActionError.DeckEmpty;
             return ActionError.None;
         }
 
@@ -40,6 +42,10 @@ namespace DrawDecks.Domain
             var card = player.Hand.FirstOrDefault(c => c.InstanceId == cardInstanceId);
             if (card == null) return ActionError.CardNotInHand;
             if (card.Definition.Kind == CardKind.Defense) return ActionError.InvalidPhase;
+            if (card.Definition.Effect == CardEffect.Damage &&
+                state.Rules.Mode != GameMode.Elimination && state.Rules.Mode != GameMode.TeamBattle &&
+                state.Rules.Mode != GameMode.Survival)
+                return ActionError.InvalidCardType;
             if (state.ActiveSuit != Suit.None &&
                 card.Definition.Kind == CardKind.Standard &&
                 card.Definition.Suit != state.ActiveSuit)
@@ -53,6 +59,9 @@ namespace DrawDecks.Domain
                 ? null
                 : state.Players.FirstOrDefault(p => p.Id == targetPlayerId && !p.IsEliminated);
             if (targetPlayerId != null && (target == null || target.Id == playerId))
+                return ActionError.InvalidTarget;
+            if (target != null && state.Rules.Mode == GameMode.TeamBattle &&
+                player.TeamId != null && StringComparer.Ordinal.Equals(player.TeamId, target.TeamId))
                 return ActionError.InvalidTarget;
 
             if (RequiresTarget(card.Definition.Effect) && target == null)
@@ -99,6 +108,7 @@ namespace DrawDecks.Domain
             return effect == CardEffect.StealCard ||
                    effect == CardEffect.DiscardRandomCard ||
                    effect == CardEffect.BlockDraw ||
+                   effect == CardEffect.Damage ||
                    effect == CardEffect.SkipTurn ||
                    effect == CardEffect.SwapHands;
         }

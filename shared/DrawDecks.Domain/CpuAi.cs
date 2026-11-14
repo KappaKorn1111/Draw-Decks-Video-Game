@@ -89,6 +89,8 @@ namespace DrawDecks.Domain
         public int SeatIndex { get; }
         public int Score { get; }
         public int HandCount { get; }
+        public int Health { get; }
+        public string? TeamId { get; }
         public bool IsEliminated { get; }
         public float RecentAggression { get; }
 
@@ -99,13 +101,17 @@ namespace DrawDecks.Domain
             int score,
             int handCount,
             bool isEliminated,
-            float recentAggression)
+            float recentAggression,
+            int health = 0,
+            string? teamId = null)
         {
             Id = id;
             DisplayName = displayName;
             SeatIndex = seatIndex;
             Score = score;
             HandCount = handCount;
+            Health = health;
+            TeamId = teamId;
             IsEliminated = isEliminated;
             RecentAggression = recentAggression;
         }
@@ -253,7 +259,8 @@ namespace DrawDecks.Domain
                     e.Data == CardEffect.StealCard.ToString() ||
                     e.Data == CardEffect.DiscardRandomCard.ToString() ||
                     e.Data == CardEffect.BlockDraw.ToString() ||
-                    e.Data == CardEffect.SkipTurn.ToString());
+                    e.Data == CardEffect.SkipTurn.ToString() ||
+                    e.Data == CardEffect.Damage.ToString());
                 float aggression = events.Length == 0 ? 0f : (float)aggressive / events.Length;
 
                 opponents.Add(new CpuOpponentObservation(
@@ -263,7 +270,9 @@ namespace DrawDecks.Domain
                     player.Score,
                     player.Hand.Count,
                     player.IsEliminated,
-                    aggression));
+                    aggression,
+                    player.Health,
+                    player.TeamId));
             }
 
             var originalCounts = state.DeckDefinitionIds
@@ -467,6 +476,9 @@ namespace DrawDecks.Domain
                             reflectedHasEffect = observation.DrawPileCount > 0 &&
                                                   attacker.HandCount < observation.MaximumHandSize;
                             break;
+                        case CardEffect.Damage:
+                            reflectedHasEffect = attacker.Health > 0;
+                            break;
                     }
                 }
 
@@ -528,6 +540,9 @@ namespace DrawDecks.Domain
                     break;
                 case CardEffect.DiscardRandomCard:
                     score = 5f + (target == null ? 0f : target.HandCount * 0.45f + Threat(target, observation.TargetScore, options) * 0.65f);
+                    break;
+                case CardEffect.Damage:
+                    score = 7f + (target == null ? 0f : Math.Max(0, observation.MaximumHandSize - target.Health) * 0.5f + (target.Health <= 5 ? 8f : 0f));
                     break;
                 case CardEffect.BlockDraw:
                     score = 4.5f + (target == null ? 0f : Threat(target, observation.TargetScore, options) * 0.5f);
@@ -618,7 +633,7 @@ namespace DrawDecks.Domain
         private static CpuOpponentObservation NextSeatAfterReverse(CpuAiObservation observation)
         {
             return NextSeatInDirection(observation, -observation.TurnDirection) ??
-                   new CpuOpponentObservation("none", "None", observation.OwnSeatIndex, 0, 0, true, 0f);
+                   new CpuOpponentObservation("none", "None", observation.OwnSeatIndex, 0, 0, true, 0f, 0);
         }
 
         private static bool IsNextSeat(CpuAiObservation observation, int seatIndex)
@@ -739,6 +754,7 @@ namespace DrawDecks.Domain
             return effect == CardEffect.StealCard ||
                    effect == CardEffect.DiscardRandomCard ||
                    effect == CardEffect.BlockDraw ||
+                   effect == CardEffect.Damage ||
                    effect == CardEffect.SkipTurn ||
                    effect == CardEffect.SwapHands;
         }
