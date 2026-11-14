@@ -50,4 +50,6 @@ Never commit secrets, signing keys, certificates, or production connection strin
 
 ## License
 
-Pending project-owner decision.
+This repository's original software code is licensed under the [Apache License, Version 2.0](LICENSE). Third-party assets and dependencies may carry separate licenses; review their notices before redistribution.
+
+See [Prompt 05 customization status](docs/CUSTOMIZATION_SYSTEM.md) for the current deck builder and ruleset implementation scope.
