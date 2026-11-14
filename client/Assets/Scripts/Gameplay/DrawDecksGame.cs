@@ -832,17 +832,19 @@ namespace DrawDecks.Client.Gameplay
         private bool IsCardLegal(CardInstance card)
         {
             if (match == null || card == null) return false;
+
+            string playerId = match.CurrentPlayer.Id;
             if (match.PendingAttack != null)
-                return card.Definition.Kind == CardKind.Defense &&
-                    (card.Definition.Effect == CardEffect.Shield ||
-                     card.Definition.Effect == CardEffect.Negate ||
-                     card.Definition.Effect == CardEffect.Reflect);
-            if (card.Definition.Kind == CardKind.Defense) return false;
-            if (card.Definition.Kind == CardKind.Standard && match.ActiveSuit != Suit.None &&
-                card.Definition.Suit != match.ActiveSuit) return false;
-            if (card.Definition.Effect == CardEffect.Wild && selectedSuit == Suit.None) return false;
-            if (NeedsTarget(card.Definition.Effect) && string.IsNullOrEmpty(GetSelectedTargetId())) return false;
-            return true;
+                return GameEngine.ValidateRespondToAttack(match, playerId, card.InstanceId) == ActionError.None;
+
+            string targetId = null;
+            if (NeedsTarget(card.Definition.Effect))
+                targetId = card.Definition.Effect == CardEffect.SkipTurn
+                    ? NextLivingSeatId(playerId)
+                    : GetSelectedTargetId();
+
+            Suit chosenSuit = card.Definition.Effect == CardEffect.Wild ? selectedSuit : Suit.None;
+            return GameEngine.ValidatePlayCard(match, playerId, card.InstanceId, targetId, chosenSuit) == ActionError.None;
         }
 
         private static bool NeedsTarget(CardEffect effect)
@@ -1020,8 +1022,7 @@ namespace DrawDecks.Client.Gameplay
         private IEnumerator CpuTurnRoutine()
         {
             cpuRoutineRunning = true;
-            float thinkDelay = CpuThinkingDelaySeconds();
-            yield return new WaitForSecondsRealtime(thinkDelay);
+            yield return new WaitForSecondsRealtime(CpuThinkingDelaySeconds());
 
             if (match == null || match.Status != MatchStatus.Active)
             {
@@ -1037,60 +1038,73 @@ namespace DrawDecks.Client.Gameplay
                 yield break;
             }
 
-            CpuAiDecision decision = CpuAi.Decide(match, cpu.Id, catalog, BuildCpuAiOptions(cpu.Id, false));
-            if (decision.Action.Kind == CpuActionKind.Draw)
+            try
             {
-                var drawResult = GameEngine.Draw(match, cpu.Id, 1);
-                if (!drawResult.Success)
-                {
-                    Debug.LogError("CPU draw candidate failed shared validation: " + drawResult.Error);
-                    decision = CpuAi.Decide(match, cpu.Id, catalog, BuildCpuAiOptions(cpu.Id, true));
-                }
-                else
-                {
-                    notice = cpu.DisplayName + " drew a card.";
-                    yield return new WaitForSecondsRealtime(Mathf.Max(0.05f, thinkDelay * 0.35f));
-                    decision = CpuAi.Decide(match, cpu.Id, catalog, BuildCpuAiOptions(cpu.Id, true));
-                }
-            }
+                CpuAiDecision decision = CpuAi.Decide(
+                    match, cpu.Id, catalog, BuildCpuAiOptions(cpu.Id, false));
 
-            if (match != null && match.Status == MatchStatus.Active && match.CurrentPlayer.Id == cpu.Id)
-            {
                 if (decision.Action.Kind == CpuActionKind.Draw)
                 {
-                    Debug.LogError("CPU policy attempted a second draw in one turn. Ending turn safely.");
-                    var end = GameEngine.EndTurn(match, cpu.Id);
-                    ApplyResult(end);
+                    var drawResult = GameEngine.Draw(match, cpu.Id, 1);
+                    if (!drawResult.Success)
+                        throw new InvalidOperationException("Validated CPU draw was rejected: " + drawResult.Error);
+
+                    notice = cpu.DisplayName + " drew a card.";
+                    decision = CpuAi.Decide(
+                        match, cpu.Id, catalog, BuildCpuAiOptions(cpu.Id, true));
                 }
-                else
+
+                if (match != null && match.Status == MatchStatus.Active &&
+                    match.CurrentPlayer.Id == cpu.Id)
                 {
+                    if (decision.Action.Kind == CpuActionKind.Draw)
+                        throw new InvalidOperationException("CPU policy selected a second draw in one turn.");
+
                     var result = ExecuteCpuDecision(cpu.Id, decision);
                     if (!result.Success)
+                        throw new InvalidOperationException(
+                            "CPU action was rejected: " + result.Error + " / " +
+                            decision.Action.Kind + " / " + decision.Reason);
+
+                    notice = cpu.DisplayName + " (" + decision.Difficulty + ") " + decision.Reason;
+                    if (decision.Action.Kind == CpuActionKind.PlayCard ||
+                        decision.Action.Kind == CpuActionKind.PlayDefense)
+                        PlayUiSound(true);
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError("CPU turn failed for " + cpu.DisplayName +
+                    "; attempting a validated recovery action.");
+                Debug.LogException(exception);
+
+                if (match != null && match.Status == MatchStatus.Active &&
+                    match.CurrentPlayer.Id == cpu.Id)
+                {
+                    ActionResult fallback = match.PendingAttack != null
+                        ? GameEngine.RespondToAttack(match, cpu.Id, null)
+                        : GameEngine.EndTurn(match, cpu.Id);
+
+                    if (fallback.Success)
                     {
-                        Debug.LogError("CPU action rejected despite shared validation: " + result.Error +
-                            " / " + decision.Action.Kind + " / " + decision.Reason);
-                        var fallback = match.PendingAttack != null
-                            ? GameEngine.RespondToAttack(match, cpu.Id, null)
-                            : GameEngine.EndTurn(match, cpu.Id);
-                        ApplyResult(fallback);
-                        notice = cpu.DisplayName + " used a safe fallback after a rejected action.";
+                        notice = cpu.DisplayName + " recovered using a safe fallback action.";
                     }
                     else
                     {
-                        notice = cpu.DisplayName + " (" + BuildCpuAiOptions(cpu.Id, false).Difficulty +
-                            ") " + decision.Reason;
-                        if (decision.Action.Kind == CpuActionKind.PlayCard ||
-                            decision.Action.Kind == CpuActionKind.PlayDefense)
-                            PlayUiSound(true);
+                        Debug.LogError("CPU recovery action was rejected: " + fallback.Error +
+                            ". Returning to the main menu to prevent a stuck match.");
+                        match = null;
+                        ShowMainMenu();
                     }
                 }
             }
 
             cpuRoutineRunning = false;
-            SyncTurnFlow();
+            if (match != null && match.Status == MatchStatus.Active)
+                SyncTurnFlow();
         }
 
-                private string NextLivingSeatId(string playerId)
+        private string NextLivingSeatId(string playerId)
         {
             int index = match.Players.ToList().FindIndex(p => p.Id == playerId);
             for (int step = 1; step <= match.Players.Count; step++)

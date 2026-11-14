@@ -60,12 +60,15 @@ public static partial class GameEngine {
    ApplyAttack(state,attack.TargetId,attack.Effect,attack.AttackerId);
   }
   state.PendingAttack=null;
+  int attackerIndex=state.MutablePlayers.FindIndex(player=>player.Id==attack.AttackerId);
+  if(attackerIndex<0)throw new InvalidOperationException("Pending attack references a missing attacker.");
+  state.CurrentPlayerIndex=attackerIndex;
   Advance(state);
   CheckVictory(state);
   return Ok(state);
  }
  public static ActionResult Discard(MatchState state,string playerId,string cardId){var err=ValidateTurn(state,playerId);if(err!=ActionError.None)return Fail(state,err);var p=state.CurrentPlayer;var card=p.MutableHand.FirstOrDefault(c=>c.InstanceId==cardId);if(card==null)return Fail(state,ActionError.CardNotInHand);state.Emit("CommandAccepted",playerId,card.InstanceId,data:"Discard");p.MutableHand.Remove(card);state.MutableDiscardPile.Add(card);state.Emit("CardDiscarded",playerId,card.InstanceId);Advance(state);CheckVictory(state);return Ok(state);}
- public static ActionResult EliminatePlayer(MatchState state,string actorId,string targetPlayerId){var err=ValidateTurn(state,actorId);if(err!=ActionError.None)return Fail(state,err);var target=state.MutablePlayers.FirstOrDefault(p=>p.Id==targetPlayerId&&!p.IsEliminated);if(target==null||target.Id==actorId)return Fail(state,ActionError.InvalidTarget);state.Emit("CommandAccepted",actorId,null,target.Id,"EliminatePlayer");target.IsEliminated=true;state.Emit("PlayerEliminated",actorId,null,target.Id);CheckVictory(state);if(state.Status==MatchStatus.Active)Advance(state);return Ok(state);}
+ public static ActionResult EliminatePlayer(MatchState state,string actorId,string targetPlayerId){var err=ValidateTurn(state,actorId);if(err!=ActionError.None)return Fail(state,err);var target=state.MutablePlayers.FirstOrDefault(p=>p.Id==targetPlayerId&&!p.IsEliminated);if(target==null||target.Id==actorId)return Fail(state,ActionError.InvalidTarget);state.Emit("CommandAccepted",actorId,null,target.Id,"EliminatePlayer");target.IsEliminated=true;state.Emit("PlayerEliminated",actorId,null,target.Id);state.PendingSkipPlayerIds.Remove(target.Id);CheckVictory(state);if(state.Status==MatchStatus.Active)Advance(state);return Ok(state);}
  public static ActionResult EndTurn(MatchState state,string playerId)
  {
   var err=ValidateEndTurn(state,playerId);
@@ -78,7 +81,7 @@ public static partial class GameEngine {
  private static void Resolve(MatchState s,PlayerState p,CardInstance c,PlayerState? target){switch(c.Definition.Effect){
  case CardEffect.None:p.Score+=c.Definition.Value*(s.DoubleScoreActive?2:1);s.DoubleScoreActive=false;break;
  case CardEffect.DrawTwo:for(int i=0;i<2&&p.MutableHand.Count<s.Rules.MaximumHandSize&&s.DrawPile.Count>0;i++)DrawOne(s,p);break;
- case CardEffect.SkipTurn:s.SkipPlayerId=target?.Id;s.Emit("TurnSkipped",p.Id,c.InstanceId,target?.Id);break;
+ case CardEffect.SkipTurn:if(target!=null)s.PendingSkipPlayerIds.Add(target.Id);s.Emit("SkipQueued",p.Id,c.InstanceId,target?.Id);break;
  case CardEffect.ReverseOrder:s.Direction*=-1;break;
  case CardEffect.SwapHands:if(target!=null){var temp=p.MutableHand.ToArray();p.MutableHand.Clear();p.MutableHand.AddRange(target.MutableHand);target.MutableHand.Clear();target.MutableHand.AddRange(temp);}break;
  case CardEffect.StealCard:case CardEffect.DiscardRandomCard:case CardEffect.BlockDraw:s.PendingAttack=new PendingAttack(p.Id,target!.Id,c.Definition.Effect,c.InstanceId);s.CurrentPlayerIndex=s.MutablePlayers.IndexOf(target);break;
@@ -91,7 +94,38 @@ public static partial class GameEngine {
  private static void ApplyAttack(MatchState s,string targetId,CardEffect effect,string attackerId){var target=s.MutablePlayers.First(x=>x.Id==targetId);switch(effect){case CardEffect.StealCard:if(target.MutableHand.Count>0){var card=target.MutableHand[0];target.MutableHand.RemoveAt(0);var attacker=s.MutablePlayers.First(x=>x.Id==attackerId);if(attacker.MutableHand.Count<s.Rules.MaximumHandSize)attacker.MutableHand.Add(card);else s.MutableDiscardPile.Add(card);}break;case CardEffect.DiscardRandomCard:if(target.MutableHand.Count>0){int i=(int)(NextRandom(s)%(ulong)target.MutableHand.Count);var card=target.MutableHand[i];target.MutableHand.RemoveAt(i);s.MutableDiscardPile.Add(card);}break;case CardEffect.BlockDraw: s.BlockedDrawPlayerId=targetId;break;}s.Emit("AttackResolved",attackerId,null,targetId,effect.ToString());}
  private static bool IsAttack(CardEffect e)=>e==CardEffect.StealCard||e==CardEffect.DiscardRandomCard||e==CardEffect.BlockDraw;
  private static void DrawOne(MatchState s,PlayerState p){if(s.DrawPile.Count==0)return;var c=s.DrawPile[0];s.DrawPile.RemoveAt(0);p.MutableHand.Add(c);}
- private static void Advance(MatchState s){if(s.Status!=MatchStatus.Active)return;int index=s.CurrentPlayerIndex;for(int i=0;i<s.MutablePlayers.Count;i++){index=(index+s.Direction+s.MutablePlayers.Count)%s.MutablePlayers.Count;if(!s.MutablePlayers[index].IsEliminated)break;}s.CurrentPlayerIndex=index;if(s.SkipPlayerId==s.CurrentPlayer.Id){s.Emit("TurnSkipped",s.CurrentPlayer.Id);s.SkipPlayerId=null;for(int i=0;i<s.MutablePlayers.Count;i++){index=(index+s.Direction+s.MutablePlayers.Count)%s.MutablePlayers.Count;if(!s.MutablePlayers[index].IsEliminated)break;}s.CurrentPlayerIndex=index;}s.TurnNumber++;s.Emit("TurnStarted",s.CurrentPlayer.Id,data:"turn="+s.TurnNumber);}
+ private static void Advance(MatchState s)
+ {
+  if(s.Status!=MatchStatus.Active)return;
+  int seatCount=s.MutablePlayers.Count;
+  int livingCount=s.MutablePlayers.Count(player=>!player.IsEliminated);
+  int origin=s.CurrentPlayerIndex;
+  int index=origin;
+
+  for(int step=1;step<=seatCount;step++)
+  {
+   index=(index+s.Direction+seatCount)%seatCount;
+   var candidate=s.MutablePlayers[index];
+   if(candidate.IsEliminated)continue;
+
+   bool isOrigin=index==origin;
+   bool isSkipped=s.PendingSkipPlayerIds.Remove(candidate.Id);
+   if(isSkipped&&!isOrigin&&livingCount>1)
+   {
+    s.Emit("TurnSkipped",candidate.Id);
+    livingCount--;
+    continue;
+   }
+
+   // Never skip every living seat. The last eligible seat becomes the
+   // deterministic progress seat when every other living seat is queued.
+   break;
+  }
+
+  s.CurrentPlayerIndex=index;
+  s.TurnNumber++;
+  s.Emit("TurnStarted",s.CurrentPlayer.Id,data:"turn="+s.TurnNumber);
+ }
  private static void CheckVictory(MatchState s){var alive=s.MutablePlayers.Where(p=>!p.IsEliminated).ToArray();if(alive.Length==1){s.Status=MatchStatus.Completed;s.WinnerPlayerId=alive[0].Id;s.Emit("MatchWon",alive[0].Id);}else if(alive.Length==0){s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system");}else{var leaders=alive.Where(p=>p.Score>=s.Rules.TargetScore).OrderByDescending(p=>p.Score).ToArray();if(leaders.Length>0){s.Status=MatchStatus.Completed;if(leaders.Length>1&&leaders[0].Score==leaders[1].Score){s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system",data:"score-tie");}else{s.WinnerPlayerId=leaders[0].Id;s.Emit("MatchWon",leaders[0].Id,data:"target-score");}}}}
  private static ActionError ValidateTurn(MatchState s,string id){if(s==null)throw new ArgumentNullException(nameof(s));if(s.Status!=MatchStatus.Active)return ActionError.MatchNotActive;if(s.PendingAttack!=null)return ActionError.InvalidPhase;if(s.CurrentPlayer.Id!=id)return s.MutablePlayers.Any(p=>p.Id==id)?ActionError.NotPlayersTurn:ActionError.InvalidPlayer;return ActionError.None;}
  private static ulong NextRandom(MatchState s){ulong x=s.RandomState;x^=x>>12;x^=x<<25;x^=x>>27;s.RandomState=x;return x*2685821657736338717UL;}

@@ -438,11 +438,49 @@ namespace DrawDecks.Domain
                 var defense = observation.OwnHand.First(c => c.InstanceId == action.CardInstanceId);
                 var attacker = observation.Opponents.FirstOrDefault(p => p.Id == observation.AttackerId);
                 float threat = attacker == null ? 0f : Threat(attacker, observation.TargetScore, options);
+
+                bool incomingHasEffect = false;
+                switch (observation.PendingAttackEffect)
+                {
+                    case CardEffect.StealCard:
+                    case CardEffect.DiscardRandomCard:
+                        incomingHasEffect = observation.OwnHand.Count > 0;
+                        break;
+                    case CardEffect.BlockDraw:
+                        incomingHasEffect = observation.DrawPileCount > 0 && observation.FreeHandSlots > 0;
+                        break;
+                    default:
+                        incomingHasEffect = true;
+                        break;
+                }
+
+                bool reflectedHasEffect = false;
+                if (attacker != null)
+                {
+                    switch (observation.PendingAttackEffect)
+                    {
+                        case CardEffect.StealCard:
+                        case CardEffect.DiscardRandomCard:
+                            reflectedHasEffect = attacker.HandCount > 0;
+                            break;
+                        case CardEffect.BlockDraw:
+                            reflectedHasEffect = observation.DrawPileCount > 0 &&
+                                                  attacker.HandCount < observation.MaximumHandSize;
+                            break;
+                    }
+                }
+
                 if (defense.Definition.Effect == CardEffect.Reflect)
-                    return 8.5f + threat * 0.45f;
+                {
+                    if (!incomingHasEffect && !reflectedHasEffect) return -3f;
+                    return 6.5f + (incomingHasEffect ? threat * 0.15f : 0f) +
+                           (reflectedHasEffect ? 2f + threat * 0.3f : 0f);
+                }
+
+                if (!incomingHasEffect) return -3f;
                 if (defense.Definition.Effect == CardEffect.Negate)
-                    return 7.5f + threat * 0.25f;
-                return 7f + threat * 0.2f;
+                    return 6.5f + threat * 0.2f;
+                return 6f + threat * 0.15f;
             }
 
             if (action.Kind == CpuActionKind.Draw)
