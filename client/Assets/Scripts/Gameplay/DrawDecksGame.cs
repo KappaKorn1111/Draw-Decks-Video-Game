@@ -37,6 +37,7 @@ namespace DrawDecks.Client.Gameplay
         private string lastTurnPlayerId;
         private string handoffAcknowledgedId;
         private bool cpuRoutineRunning;
+        private int matchGeneration;
         private bool hasDrawnThisTurn;
         private bool paused;
         private bool resultsRecorded;
@@ -391,6 +392,8 @@ namespace DrawDecks.Client.Gameplay
 
         private void ShowMainMenu()
         {
+            matchGeneration++;
+            cpuRoutineRunning = false;
             match = null;
             paused = false;
             BeginPage("Draw Decks", "A tactical card game. Build your table, choose your strategy, and play.");
@@ -632,6 +635,8 @@ namespace DrawDecks.Client.Gameplay
 
         private void CreateMatch(SeatDefinition[] seats, Ruleset rules, string[] deckIds)
         {
+            matchGeneration++;
+            cpuRoutineRunning = false;
             try
             {
                 lastSeats = seats.Select(s => new SeatDefinition(s.Id, s.DisplayName, s.Kind)).ToArray();
@@ -682,6 +687,7 @@ namespace DrawDecks.Client.Gameplay
 
             if (current.Kind == SeatKind.Cpu)
             {
+                ShowCpuThinking(current);
                 if (!cpuRoutineRunning) StartCoroutine(CpuTurnRoutine());
                 return;
             }
@@ -694,6 +700,21 @@ namespace DrawDecks.Client.Gameplay
                 return;
             }
             RefreshGameplay();
+        }
+
+        private void ShowCpuThinking(PlayerState player)
+        {
+            CpuDifficulty difficulty = cpuDifficulties.TryGetValue(player.Id, out var configured)
+                ? configured
+                : CpuDifficulty.Normal;
+            BeginPage("CPU Turn", player.DisplayName + " is considering legal actions.");
+            CreateText(pageBody, player.DisplayName.ToUpperInvariant(), 34, Gold,
+                TextAnchor.MiddleCenter, 76f, style: FontStyle.Bold);
+            CreateText(pageBody, "DIFFICULTY  ·  " + difficulty.ToString().ToUpperInvariant(), 20,
+                TextPrimary, TextAnchor.MiddleCenter, 48f);
+            CreateText(pageBody, "The CPU uses only its own hand and publicly available match information.",
+                16, TextMuted, TextAnchor.MiddleCenter, 56f);
+            CreateButton(pageBody, "PAUSE MATCH", ShowPauseMenu, 56f);
         }
 
         private void ShowHandoff(PlayerState player)
@@ -1021,8 +1042,15 @@ namespace DrawDecks.Client.Gameplay
 
         private IEnumerator CpuTurnRoutine()
         {
+            int generation = matchGeneration;
             cpuRoutineRunning = true;
             yield return new WaitForSecondsRealtime(CpuThinkingDelaySeconds());
+
+            while (paused && generation == matchGeneration)
+                yield return null;
+
+            if (generation != matchGeneration)
+                yield break;
 
             if (match == null || match.Status != MatchStatus.Active)
             {
@@ -1098,6 +1126,9 @@ namespace DrawDecks.Client.Gameplay
                     }
                 }
             }
+
+            if (generation != matchGeneration)
+                yield break;
 
             cpuRoutineRunning = false;
             if (match != null && match.Status == MatchStatus.Active)
