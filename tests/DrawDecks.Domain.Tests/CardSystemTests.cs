@@ -27,4 +27,7 @@ public sealed class CardSystemTests {
 
  [Fact] public void EliminationCompletesMatchAndRecordsWinner(){var s=Match();Assert.True(GameEngine.EliminatePlayer(s,s.CurrentPlayer.Id,"p2").Success);Assert.Equal(MatchStatus.Completed,s.Status);Assert.Equal("p1",s.WinnerPlayerId);Assert.Contains(s.Events,e=>e.Type=="PlayerEliminated");}
  [Fact] public void TargetScoreCompletesMatch(){var s=MatchFactory.Create("score-win",15,Seats(),Catalog,new Ruleset(5,7,4,false,1));var p=s.CurrentPlayer;var standard=p.Hand.First(x=>x.Definition.Kind==CardKind.Standard);Assert.True(GameEngine.PlayCard(s,p.Id,standard.InstanceId).Success);Assert.Equal(MatchStatus.Completed,s.Status);Assert.Equal(p.Id,s.WinnerPlayerId);}
+
+ [Fact] public void AcceptedCommandsReplayToEquivalentFinalState(){var s=Match(9876);var p=s.CurrentPlayer;Assert.True(GameEngine.Draw(s,p.Id).Success);Assert.True(GameEngine.Discard(s,p.Id,p.Hand[0].InstanceId).Success);Assert.True(GameEngine.EndTurn(s,s.CurrentPlayer.Id).Success);Assert.True(GameEngine.Discard(s,s.CurrentPlayer.Id,s.CurrentPlayer.Hand[0].InstanceId).Success);var replay=MatchReplay.Replay(s,Catalog);Assert.True(MatchReplay.AreEquivalent(s,replay));}
+ [Fact] public void DeckValidationRejectsUnavailableCards(){var unavailable=new CardDefinition("locked","Locked Card",CardKind.Special,CardEffect.Wild,isAvailable:false);var catalog=new CardCatalog("test",new[]{unavailable});Assert.False(DeckBuilder.Validate(catalog,new[]{"locked"}).IsValid);}
 }
