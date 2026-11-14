@@ -18,4 +18,4 @@
 - Unity Editor import/build and Docker service startup have not been verified.
 
 ## Acceptance
-The card engine runs independently of Unity. Phase 2 implementation is committed on the development branch; final acceptance is pending the latest CI run and review of replay/effect edge cases.
+The card engine runs independently of Unity. Phase 2 core acceptance is PASS on commit 440df2c8e91c45caf96e04b41a55cef123830219: backend/shared-domain Release build succeeded and all 26 domain tests passed in GitHub Actions. The engine remains intentionally separate from Unity.
