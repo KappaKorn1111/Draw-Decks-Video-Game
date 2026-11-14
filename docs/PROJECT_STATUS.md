@@ -35,13 +35,13 @@
 
 ## Verification
 
-CI passed on commit 815ba24ebbf8f1ddb3f7719ffed03e6e61218acd:
+CI passed on commit c4da17ea1574782dec04cfbd81b6d0d24846e747:
 - Backend/shared-domain Release build succeeded.
-- 32 tests passed, 0 failed, 0 skipped.
+- 33 tests passed, 0 failed, 0 skipped.
 - CPU simulations covered Easy, Normal, Hard, and Expert for 2-, 3-, and 4-seat matches (up to three CPU opponents).
-- Seeded decision repeatability, Easy randomization, Normal card prioritization, Expert public-opponent modeling, hidden-information boundary, and bounded performance controls are covered.
+- Seeded decision repeatability, Easy randomization, Normal card prioritization, Hard-versus-Normal threat weighting, Expert public-opponent modeling, hidden-information boundary, and bounded performance controls are covered.
 
-Run: https://github.com/KappaKorn1111/Draw-Decks-Video-Game/actions/runs/43562746785
+Run: https://github.com/KappaKorn1111/Draw-Decks-Video-Game/actions/runs/43563065542
 
 ## Explicit limitations
 
