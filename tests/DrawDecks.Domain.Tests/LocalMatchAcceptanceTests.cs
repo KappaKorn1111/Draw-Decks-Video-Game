@@ -13,6 +13,7 @@ public sealed class LocalMatchAcceptanceTests
         var configurations = new[]
         {
             new[] { SeatKind.Human, SeatKind.Cpu },
+            new[] { SeatKind.Human, SeatKind.Human },
             new[] { SeatKind.Human, SeatKind.Cpu, SeatKind.Cpu },
             new[] { SeatKind.Human, SeatKind.Cpu, SeatKind.Cpu, SeatKind.Cpu },
             new[] { SeatKind.Human, SeatKind.Human, SeatKind.Cpu, SeatKind.Cpu },
