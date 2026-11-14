@@ -22,13 +22,13 @@
 
 ## Automated evidence
 
-The successful GitHub Actions run on code commit 214e0a908a670750cfd365ebed2a5a65efb05f00 reported:
+The successful GitHub Actions run on code commit 8ccf9137c297d59d3f35b18fae603891bdafe205 reported:
 - Backend/shared-domain Release build succeeded with 0 warnings and 0 errors.
-- 43 tests passed, 0 failed, 0 skipped.
+- 45 tests passed, 0 failed, 0 skipped.
 - 120 deterministic CPU match simulations: four difficulty levels × three player counts (2, 3, 4 seats) × ten seeds.
-- Regression coverage for attack turn ordering, multiple skips, skip-target elimination, skip replay, ineffective CPU defense, invalid deck inputs, sudden score, maximum-turn termination, and single terminal-result emission.
+- Regression coverage for attack turn ordering, multiple skips, skip-target elimination, skip replay, ineffective CPU defense, invalid deck inputs, sudden score, maximum-turn termination, single terminal-result emission, maximum-turn sudden-score replay, and target-score victory idempotence.
 
-Run: https://github.com/KappaKorn1111/Draw-Decks-Video-Game/actions/runs/43568682436
+Run: https://github.com/KappaKorn1111/Draw-Decks-Video-Game/actions/runs/43569298132
 
 ## Not verified in this environment
 
