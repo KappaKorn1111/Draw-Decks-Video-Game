@@ -81,7 +81,7 @@ public static partial class GameEngine {
  }
  private static void Resolve(MatchState s,PlayerState p,CardInstance c,PlayerState? target){switch(c.Definition.Effect){
  case CardEffect.None:AwardScore(s,p,c.Definition.Value*(s.DoubleScoreActive?2:1));s.DoubleScoreActive=false;break;
- case CardEffect.DrawTwo:for(int i=0;i<2&&p.MutableHand.Count<s.Rules.MaximumHandSize&&s.DrawPile.Count>0;i++)DrawOne(s,p);break;
+ case CardEffect.DrawTwo:for(int i=0;i<2&&p.MutableHand.Count<s.Rules.MaximumHandSize&&(s.DrawPile.Count>0||(s.Rules.Mode==GameMode.Survival&&s.MutableDiscardPile.Count>0));i++)DrawOne(s,p);break;
  case CardEffect.SkipTurn:if(target!=null)s.PendingSkipPlayerIds.Add(target.Id);s.Emit("SkipQueued",p.Id,c.InstanceId,target?.Id);break;
  case CardEffect.ReverseOrder:s.Direction*=-1;break;
  case CardEffect.SwapHands:if(target!=null){var temp=p.MutableHand.ToArray();p.MutableHand.Clear();p.MutableHand.AddRange(target.MutableHand);target.MutableHand.Clear();target.MutableHand.AddRange(temp);}break;
