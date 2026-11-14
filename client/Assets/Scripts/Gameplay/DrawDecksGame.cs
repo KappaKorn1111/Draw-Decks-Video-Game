@@ -54,6 +54,7 @@ namespace DrawDecks.Client.Gameplay
         private readonly SeatKind[] slotKinds = { SeatKind.Human, SeatKind.Cpu, SeatKind.Cpu, SeatKind.Cpu };
         private readonly InputField[] nameInputs = new InputField[MaxSeats];
         private readonly Text[] kindLabels = new Text[MaxSeats];
+        private readonly Transform[] setupSeatRows = new Transform[MaxSeats];
         private Text playerCountLabel;
         private Text rulesetLabel;
         private Text deckLabel;
@@ -450,6 +451,8 @@ namespace DrawDecks.Client.Gameplay
             {
                 int seatIndex = i;
                 var row = CreateRow(pageBody, 64f);
+                setupSeatRows[i] = row;
+                row.gameObject.SetActive(i < playerCount);
                 CreateText(row, "SEAT " + (i + 1), 16, TextMuted, TextAnchor.MiddleCenter, 54f,
                     sizeDelta: new Vector2(110f, 54f));
                 nameInputs[i] = CreateInput(row, slotNames[i], 360f);
@@ -469,6 +472,8 @@ namespace DrawDecks.Client.Gameplay
         {
             playerCount = playerCount >= 4 ? 2 : playerCount + 1;
             if (playerCountLabel != null) playerCountLabel.text = "Players: " + playerCount;
+            for (int i = 0; i < setupSeatRows.Length; i++)
+                if (setupSeatRows[i] != null) setupSeatRows[i].gameObject.SetActive(i < playerCount);
         }
 
         private string RulesetDisplay()
