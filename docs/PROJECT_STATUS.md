@@ -34,5 +34,5 @@
 ## Acceptance state
 
 **Implementation status:** IMPLEMENTED — local client source, shared Unity package integration, and seat-composition tests are committed.  
-**CI status:** PASS on commit 4879b44db1d5317ecb470867f49884c68d881ca4 — Release build succeeded; 27 tests passed, 0 failed, 0 skipped.  
+**CI status:** PASS on commit a57cd8b1099ad9e021de85cb64fded3489e3c80d — Release build succeeded; 27 tests passed, 0 failed, 0 skipped.  
 **Unity verification:** Pending. Unity Editor import, Play Mode end-to-end match, and desktop player build must still be executed before Prompt 03 is fully accepted.  
