@@ -69,7 +69,7 @@ public static partial class GameEngine {
   return Ok(state);
  }
  public static ActionResult Discard(MatchState state,string playerId,string cardId){var err=ValidateTurn(state,playerId);if(err!=ActionError.None)return Fail(state,err);var p=state.CurrentPlayer;var card=p.MutableHand.FirstOrDefault(c=>c.InstanceId==cardId);if(card==null)return Fail(state,ActionError.CardNotInHand);state.Emit("CommandAccepted",playerId,card.InstanceId,data:"Discard");p.MutableHand.Remove(card);state.MutableDiscardPile.Add(card);state.Emit("CardDiscarded",playerId,card.InstanceId);Advance(state);CheckVictory(state);return Ok(state);}
- public static ActionResult EliminatePlayer(MatchState state,string actorId,string targetPlayerId){var err=ValidateTurn(state,actorId);if(err!=ActionError.None)return Fail(state,err);var target=state.MutablePlayers.FirstOrDefault(p=>p.Id==targetPlayerId&&!p.IsEliminated);if(target==null||target.Id==actorId)return Fail(state,ActionError.InvalidTarget);state.Emit("CommandAccepted",actorId,null,target.Id,"EliminatePlayer");target.IsEliminated=true;target.Health=0;state.Emit("PlayerEliminated",actorId,null,target.Id);if(state.Rules.Mode==GameMode.Survival&&target.Kind==SeatKind.Cpu){state.CpuDefeatedThisWave++;state.SurvivalScore+=state.Rules.SurvivalScorePerCpu;}state.PendingSkipPlayerIds.Remove(target.Id);CheckVictory(state);if(state.Status==MatchStatus.Active)Advance(state);return Ok(state);}
+ public static ActionResult EliminatePlayer(MatchState state,string actorId,string targetPlayerId){var err=ValidateTurn(state,actorId);if(err!=ActionError.None)return Fail(state,err);var target=state.MutablePlayers.FirstOrDefault(p=>p.Id==targetPlayerId&&!p.IsEliminated);if(target==null||target.Id==actorId)return Fail(state,ActionError.InvalidTarget);if(state.Rules.Mode==GameMode.TeamBattle&&target.TeamId!=null&&target.TeamId==state.CurrentPlayer.TeamId)return Fail(state,ActionError.InvalidTarget);state.Emit("CommandAccepted",actorId,null,target.Id,"EliminatePlayer");target.IsEliminated=true;target.Health=0;state.Emit("PlayerEliminated",actorId,null,target.Id);if(state.Rules.Mode==GameMode.Survival&&target.Kind==SeatKind.Cpu){state.CpuDefeatedThisWave++;state.SurvivalScore+=state.Rules.SurvivalScorePerCpu;}state.PendingSkipPlayerIds.Remove(target.Id);CheckVictory(state);if(state.Status==MatchStatus.Active)Advance(state);return Ok(state);}
  public static ActionResult EndTurn(MatchState state,string playerId)
  {
   var err=ValidateEndTurn(state,playerId);
@@ -234,6 +234,7 @@ public static partial class GameEngine {
   }
   if(alive.Length==1){s.Status=MatchStatus.Completed;s.WinnerPlayerId=alive[0].Id;s.Emit("MatchWon",alive[0].Id);}
   else if(alive.Length==0){s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system");}
+  else if(s.Rules.Mode==GameMode.Elimination)return;
   else
   {
    var leaders=alive.Where(p=>p.Score>=s.Rules.TargetScore).OrderByDescending(p=>p.Score).ToArray();
