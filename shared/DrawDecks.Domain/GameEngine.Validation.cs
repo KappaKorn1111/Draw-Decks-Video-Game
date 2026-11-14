@@ -54,6 +54,9 @@ namespace DrawDecks.Domain
                 : state.Players.FirstOrDefault(p => p.Id == targetPlayerId && !p.IsEliminated);
             if (targetPlayerId != null && (target == null || target.Id == playerId))
                 return ActionError.InvalidTarget;
+            if (target != null && state.Rules.Mode == GameMode.TeamBattle &&
+                player.TeamId != null && StringComparer.Ordinal.Equals(player.TeamId, target.TeamId))
+                return ActionError.InvalidTarget;
 
             if (RequiresTarget(card.Definition.Effect) && target == null)
                 return ActionError.InvalidTarget;
@@ -99,6 +102,7 @@ namespace DrawDecks.Domain
             return effect == CardEffect.StealCard ||
                    effect == CardEffect.DiscardRandomCard ||
                    effect == CardEffect.BlockDraw ||
+                   effect == CardEffect.Damage ||
                    effect == CardEffect.SkipTurn ||
                    effect == CardEffect.SwapHands;
         }
