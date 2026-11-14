@@ -19,7 +19,9 @@ namespace DrawDecks.Domain
             if (state.BlockedDrawPlayerId == playerId) return ActionError.None;
             if (state.CurrentPlayer.Hand.Count + count > state.Rules.MaximumHandSize)
                 return ActionError.HandLimitReached;
-            if (state.DrawPileCount < count) return ActionError.DeckEmpty;
+            int availableCards = state.DrawPileCount +
+                (state.Rules.Mode == GameMode.Survival ? state.DiscardPile.Count : 0);
+            if (availableCards < count) return ActionError.DeckEmpty;
             return ActionError.None;
         }
 
