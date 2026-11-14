@@ -1,28 +1,22 @@
 # Draw Decks — Implementation Status
 
-**Current phase:** Phase 1 — Core Game Foundation  
-**Working branch:** `dev/foundation`  
+**Current phase:** Phase 2 — Complete Card System & Game Rules Engine  
+**Working branch:** dev/foundation  
 **Pull request:** #1 (draft)
 
-## Product
-A turn-based strategy card game for 2–4 seats in the default competitive ruleset, with human and CPU opponents. One human versus CPU supports solo play.
-
-## Architecture baseline
-Unity/C# client; portable shared C# domain; ASP.NET Core API; PostgreSQL durable persistence; Redis transient coordination; SignalR planned for real-time communication; server-authoritative online match execution.
-
-## Committed foundation
-- Repository conventions, .NET SDK pin, CI workflow.
-- Shared deterministic domain scaffold and xUnit tests.
-- ASP.NET Core API and solution scaffold.
-- Unity project skeleton and Input System package declaration.
-- PostgreSQL schema baseline and PostgreSQL/Redis Compose.
-- Product, architecture, rulebook, setup, and checklist documentation.
+## Phase 2 implemented
+- Versioned catalog with 52 standard cards and all 13 requested action, attack, defense, and special definitions.
+- Unique physical card instances, rarity metadata, values, suits, ranks, and per-definition copy limits.
+- Deck validation, seeded shuffle, deal, draw, hand limits, play, discard, reverse direction, and skip scheduling.
+- Domain resolution for Draw 2, Swap Hands, Steal, Random Discard, Block Draw, Shield, Reflect, Negate, Wild, Deck Reset, and Double Score.
+- Typed command failures and ordered event records.
+- xUnit coverage for catalog/effect definitions, deck validation, shuffle determinism, draw/discard, hand limits, empty deck, invalid commands, attack/defense, and representative special effects.
 
 ## Explicitly incomplete
-- Full Confluence rules are specified but not yet implemented in the domain engine.
-- Authentication, database runtime integration/migration runner, SignalR, matchmaking, LAN, and authoritative match workers remain future implementation.
-- Unity project has not been imported or built by a licensed Unity Editor.
-- No desktop/mobile release binaries exist yet.
+- Vitality/elimination, complete win and tie-break conditions, and replay-from-event verification.
+- Full effect stacking semantics and exhaustive multi-effect permutations.
+- Authentication, database runtime integration, SignalR, matchmaking, LAN, and authoritative match workers.
+- Unity Editor import/build and Docker service startup have not been verified.
 
-## Acceptance gate
-Phase 1 is not complete until .NET solution build and domain tests pass in CI, PostgreSQL/Redis startup is verified, and Unity Editor imports the project successfully. Platform acceptance requires actual per-platform builds and smoke tests.
+## Acceptance
+The shared engine executes independently of Unity and provides domain behavior for the card catalog and core card actions. Prompt 02 remains NEEDS REVISION until lifecycle/elimination/replay edge cases are implemented and CI passes.
