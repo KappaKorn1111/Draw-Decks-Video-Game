@@ -40,6 +40,10 @@ namespace DrawDecks.Domain
             var card = player.Hand.FirstOrDefault(c => c.InstanceId == cardInstanceId);
             if (card == null) return ActionError.CardNotInHand;
             if (card.Definition.Kind == CardKind.Defense) return ActionError.InvalidPhase;
+            if (card.Definition.Effect == CardEffect.Damage &&
+                state.Rules.Mode != GameMode.Elimination && state.Rules.Mode != GameMode.TeamBattle &&
+                state.Rules.Mode != GameMode.Survival)
+                return ActionError.InvalidCardType;
             if (state.ActiveSuit != Suit.None &&
                 card.Definition.Kind == CardKind.Standard &&
                 card.Definition.Suit != state.ActiveSuit)
