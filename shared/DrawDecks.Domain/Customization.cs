@@ -205,6 +205,8 @@ namespace DrawDecks.Domain
                 errors.Add("CPU seat count is invalid; at least one human seat is required.");
             if (cpuSeatCount != CpuOpponentCount)
                 errors.Add("CPU seat count does not match the configured CPU opponent count.");
+            if (cpuSeatCount != CpuOpponentCount)
+                errors.Add("CPU seat count does not match the configured CPU opponent count.");
             if (CpuOpponentCount < 0 || CpuOpponentCount > MaximumPlayers - 1)
                 errors.Add("Configured CPU opponent count is invalid.");
             if (DeckMinimumSize < 1 || DeckMaximumSize < DeckMinimumSize || DeckMaximumSize > 108)
