@@ -47,6 +47,7 @@ namespace DrawDecks.Client.Gameplay
         private int rulesetIndex;
         private int deckIndex;
         private int timerIndex;
+        private string setupMode = "Local Multiplayer";
         private readonly string[] defaultNames = { "Player 1", "Player 2", "Player 3", "Player 4" };
         private readonly string[] slotNames = { "Player 1", "Player 2", "Player 3", "Player 4" };
         private readonly SeatKind[] slotKinds = { SeatKind.Human, SeatKind.Cpu, SeatKind.Cpu, SeatKind.Cpu };
@@ -402,6 +403,7 @@ namespace DrawDecks.Client.Gameplay
 
         private void ShowMatchSetup(bool soloPractice)
         {
+            setupMode = soloPractice ? "Solo Practice · Human vs CPU" : "Local Multiplayer · Hot-Seat";
             if (soloPractice)
             {
                 playerCount = 2;
@@ -420,7 +422,7 @@ namespace DrawDecks.Client.Gameplay
                 slotNames[1] = string.IsNullOrWhiteSpace(slotNames[1]) ? defaultNames[1] : slotNames[1];
             }
 
-            BeginPage("Match Setup", "Configure 2–4 total seats. Choose player names, human or CPU control, rules, deck, and turn timer.");
+            BeginPage("Match Setup", setupMode + "  ·  Configure 2–4 total seats, player names, control types, rules, deck, and timer.");
             var settingsRow = CreateRow(pageBody, 58f);
             playerCountLabel = CreateButton(settingsRow, "Players: " + playerCount, CyclePlayerCount, 58f, background: AccentDim)
                 .GetComponentInChildren<Text>();
@@ -588,6 +590,7 @@ namespace DrawDecks.Client.Gameplay
             var current = match.CurrentPlayer;
             if (lastTurnPlayerId != current.Id)
             {
+                handoffAcknowledgedId = null;
                 lastTurnPlayerId = current.Id;
                 turnTimeRemaining = turnTimeSeconds;
                 hasDrawnThisTurn = false;
@@ -796,7 +799,8 @@ namespace DrawDecks.Client.Gameplay
                 return;
             }
 
-            string targetId = NeedsTarget(card.Definition.Effect) ? GetSelectedTargetId() : null;
+            string targetId = card.Definition.Effect == CardEffect.SkipTurn ? NextLivingSeatId(match.CurrentPlayer.Id) :
+                (NeedsTarget(card.Definition.Effect) ? GetSelectedTargetId() : null);
             var result = GameEngine.PlayCard(match, match.CurrentPlayer.Id, selectedCardId, targetId,
                 card.Definition.Effect == CardEffect.Wild ? selectedSuit : Suit.None);
             if (result.Success) PlayUiSound(true);
@@ -950,7 +954,7 @@ namespace DrawDecks.Client.Gameplay
             int index = match.Players.ToList().FindIndex(p => p.Id == playerId);
             for (int step = 1; step <= match.Players.Count; step++)
             {
-                int candidate = (index + step) % match.Players.Count;
+                int candidate = (index + (match.TurnDirection * step) + match.Players.Count * 2) % match.Players.Count;
                 if (!match.Players[candidate].IsEliminated && match.Players[candidate].Id != playerId)
                     return match.Players[candidate].Id;
             }
