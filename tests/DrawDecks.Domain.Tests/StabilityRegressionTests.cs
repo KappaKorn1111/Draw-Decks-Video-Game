@@ -216,6 +216,49 @@ public sealed class StabilityRegressionTests
     }
 
     [Fact]
+    public void MaximumTurnSuddenScoreCanBeReplayedExactly()
+    {
+        var seats = new[]
+        {
+            new SeatDefinition("p0", "Player 0", SeatKind.Human),
+            new SeatDefinition("p1", "Player 1", SeatKind.Cpu)
+        };
+        var deck = Catalog.Definitions
+            .Where(definition => definition.Kind == CardKind.Standard)
+            .Select(definition => definition.Id)
+            .ToArray();
+        var rules = new Ruleset(startingHandSize: 5, maximumHandSize: 7,
+            maximumPlayers: 2, targetScore: 100, maximumTurns: 4);
+        var match = MatchFactory.Create("turn-limit-replay", 1010UL, seats, Catalog, rules, deck);
+        match.ActiveSuit = Suit.Hearts;
+
+        for (int turn = 0; turn < 4 && match.Status == MatchStatus.Active; turn++)
+            Assert.True(GameEngine.EndTurn(match, match.CurrentPlayer.Id).Success);
+
+        Assert.NotEqual(MatchStatus.Active, match.Status);
+        var replay = MatchReplay.Replay(match, Catalog);
+        Assert.True(MatchReplay.AreEquivalent(match, replay));
+    }
+
+    [Fact]
+    public void TargetScoreVictoryEmitsExactlyOneTerminalEvent()
+    {
+        var seats = new[]
+        {
+            new SeatDefinition("p0", "Player 0", SeatKind.Human),
+            new SeatDefinition("p1", "Player 1", SeatKind.Cpu)
+        };
+        var match = MatchFactory.Create("single-win-event", 1011UL, seats, Catalog,
+            new Ruleset(startingHandSize: 1, maximumHandSize: 7, maximumPlayers: 2, targetScore: 1));
+        var scorer = match.CurrentPlayer;
+        var scoringCard = scorer.Hand.First(card => card.Definition.Kind == CardKind.Standard);
+
+        Assert.True(GameEngine.PlayCard(match, scorer.Id, scoringCard.InstanceId).Success);
+        Assert.Equal(MatchStatus.Completed, match.Status);
+        Assert.Single(match.Events, gameEvent => gameEvent.Type == "MatchWon" || gameEvent.Type == "MatchDraw");
+    }
+
+    [Fact]
     public void CpuDoesNotWasteADefenseAgainstBlockedDrawWhenAlreadyAtHandLimit()
     {
         var seats = new[]
