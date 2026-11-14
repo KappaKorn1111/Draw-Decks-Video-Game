@@ -4,12 +4,15 @@ A strategy card game for 2–4 total seats, supporting human and CPU players.
 
 ## Current milestone
 
-Phase 3 — Playable Unity Client & Local Match System. The project includes a runtime-built Unity menu, local match setup, hot-seat handoffs, CPU turns, card actions, and match results. See [Local Client](docs/LOCAL_CLIENT.md), [Project Status](docs/PROJECT_STATUS.md), the [rulebook](docs/RULEBOOK.md), and [implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md).
+Phase 4 — CPU Opponents & Intelligent Game AI. The shared C# domain includes four CPU difficulty levels, legal-action candidate generation, hidden-information-safe observations, seeded decision-making, bounded planning/evaluation controls, and match simulation tests. The Unity client exposes per-seat CPU difficulty, thinking delay, and AI budget controls.
+
+See [CPU AI](docs/CPU_AI.md), [Local Client](docs/LOCAL_CLIENT.md), [Project Status](docs/PROJECT_STATUS.md), the [rulebook](docs/RULEBOOK.md), and [implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md).
 
 ## Architecture
 
 - Unity 6.3 + C# client; Windows, macOS, and Linux are the initial desktop targets.
 - Shared deterministic C# domain package imported by Unity and used by the server.
+- Shared CPU decision engine; no client-side duplicate rules.
 - ASP.NET Core 10 API foundation.
 - PostgreSQL schema baseline and Redis local infrastructure.
 - Planned authoritative online match processes and SignalR real-time transport.
@@ -17,12 +20,12 @@ Phase 3 — Playable Unity Client & Local Match System. The project includes a r
 ## Repository map
 
 - client/ — Unity project, runtime UI, and editor setup.
-- shared/DrawDecks.Domain/ — shared card rules, match state, and domain package metadata.
+- shared/DrawDecks.Domain/ — shared card rules, match state, legal-action validation, and CPU AI.
 - server/ — ASP.NET Core solution and API foundation.
 - database/migrations/ — PostgreSQL schema baseline.
 - infra/ — local dependency orchestration.
-- tests/ — automated domain and local-match acceptance tests.
-- docs/ — product, architecture, rules, setup, status, and client notes.
+- tests/ — automated domain, local-match, and CPU AI tests.
+- docs/ — product, architecture, rules, setup, status, and implementation notes.
 
 ## Quick start
 
@@ -35,7 +38,7 @@ The shared local Unity package is resolved from shared/DrawDecks.Domain via file
     dotnet test tests/DrawDecks.Domain.Tests/DrawDecks.Domain.Tests.csproj -c Release
     docker compose -f infra/docker-compose.yml up -d
 
-The .NET CI workflow validates the shared domain. Unity Editor import, Play Mode, and player builds require a Unity Editor installation and are reported separately from .NET CI.
+The .NET CI workflow validates the shared domain, CPU AI, and automated match simulations. Unity Editor import, Play Mode, and player builds require a Unity Editor installation and are reported separately from .NET CI.
 
 ## Known scope
 
