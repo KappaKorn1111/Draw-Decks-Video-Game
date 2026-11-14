@@ -214,7 +214,10 @@ public sealed class CpuAiTests
                 }
 
                 Assert.True(match.Status != MatchStatus.Active,
-                    "Match failed to complete. Difficulty=" + difficulty + ", players=" + playerCount);
+                    "Match failed to complete. Difficulty=" + difficulty + ", players=" + playerCount +
+                    ", seed=" + seed + ", turn=" + match.TurnNumber + ", deck=" + match.DrawPileCount +
+                    ", streaks=" + string.Join(",", match.ConsecutiveNonScoringTurns.Select(pair =>
+                        pair.Key + ":" + pair.Value)));
                 Assert.InRange(commands, 1, 2500);
                 if (match.Status == MatchStatus.Completed)
                     Assert.Contains(match.Players, player => player.Id == match.WinnerPlayerId);
