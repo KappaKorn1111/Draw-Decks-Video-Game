@@ -47,13 +47,13 @@
 
 ## Verification
 
-GitHub Actions passed on commit 214e0a908a670750cfd365ebed2a5a65efb05f00:
+GitHub Actions passed on commit 8ccf9137c297d59d3f35b18fae603891bdafe205:
 - Backend/shared-domain Release build succeeded with 0 warnings and 0 errors.
-- **43 tests passed, 0 failed, 0 skipped.**
+- **45 tests passed, 0 failed, 0 skipped.**
 - CPU simulation suite covers **120 deterministic matches**: Easy, Normal, Hard, and Expert across 2-, 3-, and 4-seat matches, with ten seeds for each combination.
-- Regression tests cover non-next-seat attack responses, multiple queued skips, elimination of skipped players, replay of queued skips, ineffective CPU defense, deck validation, deck-exhaustion sudden score, maximum-turn stalemate protection, and single terminal-event emission.
+- Regression tests cover non-next-seat attack responses, multiple queued skips, elimination of skipped players, replay of queued skips, ineffective CPU defense, deck validation, deck-exhaustion sudden score, maximum-turn stalemate protection, single terminal-event emission, maximum-turn sudden-score replay, and target-score terminal-event idempotence.
 
-Run: https://github.com/KappaKorn1111/Draw-Decks-Video-Game/actions/runs/43568682436
+Run: https://github.com/KappaKorn1111/Draw-Decks-Video-Game/actions/runs/43569298132
 
 ## Remaining gaps — do not treat as verified
 
@@ -69,6 +69,6 @@ Run: https://github.com/KappaKorn1111/Draw-Decks-Video-Game/actions/runs/4356868
 ## Acceptance state
 
 **Stabilization status:** PASS for the shared C#/.NET domain and CPU simulation scope described above.  
-**CI:** PASS — 43/43 tests on commit 214e0a908a670750cfd365ebed2a5a65efb05f00.  
+**CI:** PASS — 45/45 tests on commit 8ccf9137c297d59d3f35b18fae603891bdafe205.  
 **Unity runtime acceptance:** PENDING — Editor import, Play Mode CPU matches, UI/hot-seat walkthroughs, and desktop player builds remain required.  
 **Confluence rulebook parity:** NEEDS IMPLEMENTATION — the listed ruleset gaps must be resolved before claiming full product-rulebook compliance.
