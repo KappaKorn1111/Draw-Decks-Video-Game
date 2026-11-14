@@ -132,6 +132,10 @@ namespace DrawDecks.Client.Gameplay
         private void Start()
         {
             LoadStatistics();
+            activeDeckProfileId = PlayerPrefs.GetString("DrawDecks.ActiveDeckProfile", string.Empty);
+            activeRulesProfileId = PlayerPrefs.GetString("DrawDecks.ActiveRulesProfile", string.Empty);
+            var activeRules = LocalCustomizationStore.LoadRules().FirstOrDefault(item => item.id == activeRulesProfileId);
+            if (activeRules != null) gameModeIndex = Mathf.Clamp(activeRules.gameMode, 0, 4);
             timerIndex = PlayerPrefs.GetInt("DrawDecks.DefaultTimer", 1) == 1 ? 0 : 2;
             ShowMainMenu();
         }
@@ -561,12 +565,16 @@ namespace DrawDecks.Client.Gameplay
 
         private string RulesetDisplay()
         {
-            return new[] { "Rules: Classic 100", "Rules: Quick 50", "Rules: Marathon 150" }[rulesetIndex % 3];
+            var profile = LocalCustomizationStore.LoadRules().FirstOrDefault(item => item.id == activeRulesProfileId);
+            return profile == null
+                ? new[] { "Rules: Classic 100", "Rules: Quick 50", "Rules: Marathon 150" }[rulesetIndex % 3]
+                : "Rules: " + profile.name;
         }
 
         private string DeckDisplay()
         {
-            return deckIndex % 2 == 0 ? "Deck: Confluence 65" : "Deck: Classic 52";
+            var profile = LocalCustomizationStore.LoadDecks().FirstOrDefault(item => item.id == activeDeckProfileId);
+            return profile == null ? (deckIndex % 2 == 0 ? "Deck: Confluence 65" : "Deck: Classic 52") : "Deck: " + profile.name;
         }
 
         private string TimerDisplay()
@@ -1473,6 +1481,8 @@ namespace DrawDecks.Client.Gameplay
             {
                 LocalCustomizationStore.SaveDeck(profile);
                 activeDeckProfileId = profile.id;
+                PlayerPrefs.SetString("DrawDecks.ActiveDeckProfile", activeDeckProfileId);
+                PlayerPrefs.Save();
                 deckIndex = 0;
                 ShowNoticePage("Deck saved locally: " + profile.name + " (" + cards.Length + " cards). It is now selected for new matches.");
             }
@@ -1488,6 +1498,8 @@ namespace DrawDecks.Client.Gameplay
             var profile = LocalCustomizationStore.LoadDecks().FirstOrDefault(item => item.id == id);
             if (profile == null) { ShowNoticePage("That saved deck is unavailable or invalid."); return; }
             activeDeckProfileId = profile.id;
+            PlayerPrefs.SetString("DrawDecks.ActiveDeckProfile", activeDeckProfileId);
+            PlayerPrefs.Save();
             ShowDeckBuilder();
         }
 
@@ -1500,6 +1512,8 @@ namespace DrawDecks.Client.Gameplay
             }
             LocalCustomizationStore.DeleteDeck(activeDeckProfileId);
             activeDeckProfileId = null;
+            PlayerPrefs.DeleteKey("DrawDecks.ActiveDeckProfile");
+            PlayerPrefs.Save();
             ShowDeckBuilder();
         }
 
@@ -1587,6 +1601,8 @@ namespace DrawDecks.Client.Gameplay
             {
                 LocalCustomizationStore.SaveRules(profile);
                 activeRulesProfileId = profile.id;
+                PlayerPrefs.SetString("DrawDecks.ActiveRulesProfile", activeRulesProfileId);
+                PlayerPrefs.Save();
                 gameModeIndex = profile.gameMode;
                 ShowNoticePage("Custom ruleset saved locally: " + profile.name + ". It is selected for new matches.");
             }
@@ -1602,6 +1618,8 @@ namespace DrawDecks.Client.Gameplay
             var profile = LocalCustomizationStore.LoadRules().FirstOrDefault(item => item.id == id);
             if (profile == null) { ShowNoticePage("That saved ruleset is unavailable or invalid."); return; }
             activeRulesProfileId = profile.id;
+            PlayerPrefs.SetString("DrawDecks.ActiveRulesProfile", activeRulesProfileId);
+            PlayerPrefs.Save();
             gameModeIndex = Mathf.Clamp(profile.gameMode, 0, 4);
             ShowRulesEditor();
         }
@@ -1615,6 +1633,8 @@ namespace DrawDecks.Client.Gameplay
             }
             LocalCustomizationStore.DeleteRules(activeRulesProfileId);
             activeRulesProfileId = null;
+            PlayerPrefs.DeleteKey("DrawDecks.ActiveRulesProfile");
+            PlayerPrefs.Save();
             ShowRulesEditor();
         }
 
