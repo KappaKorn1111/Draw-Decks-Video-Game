@@ -1,12 +1,12 @@
 # Draw Decks — Implementation Status
 
-**Current phase:** Phase 5 — Deck Builder & Custom Ruleset foundation  
-**Working branch:** feature/prompt-05-customization  
-**Pull request:** #2 (open; not merged)
+**Current phase:** Phase 5 — Game Modes & Customization Runtime  
+**Working branch:** feature/prompt-05-mode-runtime  
+**Pull request:** #3 (open; not merged)
 
 ## Phase 2 — Shared card system and rules engine
 
-- Versioned catalog with 52 standard cards and all 13 requested action, attack, defense, and special definitions.
+- Versioned catalog with 52 standard cards and 14 action, attack, defense, and special definitions, including Strike damage.
 - Unique physical card instances, rarity, availability, values, suits, ranks, and per-definition copy limits.
 - Deck validation, deterministic seeded shuffle, deal, draw, hand limits, play, discard, reverse direction, skip scheduling, and suit selection.
 - Domain resolution for Draw 2, Swap Hands, Steal, Random Discard, Block Draw, Shield, Reflect, Negate, Wild, Deck Reset, and Double Score.
@@ -85,3 +85,25 @@ Run: https://github.com/KappaKorn1111/Draw-Decks-Video-Game/actions/runs/4356929
 - Elimination, Team Battle, and Survival runtime mechanics; durable local persistence; Unity editor integration; and community sharing/server serialization remain unimplemented.
 
 Prompt 05 acceptance remains **NEEDS REVISION**. See [Customization System](CUSTOMIZATION_SYSTEM.md).
+
+
+## Phase 5 — Game modes and customization runtime
+
+- Added immutable, versioned deck and ruleset profiles, named presets for Classic, Elimination, Team Battle, Survival, and Custom, plus configured-match validation.
+- Added deck editing sessions, card catalog search/filtering, rarity/effect statistics, and duplicate/banned/allowlist/special/effect restrictions.
+- Added player health and Strike damage attacks with Shield, Negate, and Reflect responses. Zero health eliminates a player and triggers mode-specific victory resolution.
+- Elimination uses last-player-standing victory and health-based deterministic safety resolution.
+- Team Battle assigns four seats to two teams, tracks shared team scores, prevents friendly targeted interactions, and supports score- or elimination-based team victory.
+- Survival supports one human versus CPU opponents, wave clearing, CPU respawn, increasing CPU health, survival scoring, deterministic discard recycling, progressive CPU difficulty, and leaderboard-ready result records.
+- Unity setup now selects all five modes. The HUD displays health, team totals, and Survival wave/score state; local Survival best score persists in PlayerPrefs.
+- Added deterministic mode tests for damage, elimination, team assignment/scoring/friendly fire, Survival progression/replay, leaderboard projection, and configured match creation.
+- GitHub Actions run #239 passed on commit 66ae2420bc57180bbcdebd70fcb4f72f420c9a65: Release build had 0 warnings and 0 errors; **63 tests passed, 0 failed, 0 skipped**.
+
+## Remaining acceptance gates
+
+- Unity Editor import, Play Mode, and desktop/mobile player builds still require a licensed Unity workstation or runner; hosted CI only compiles the .NET shared domain/backend.
+- Unity's deck builder remains preset-only; the new domain editor is not yet connected to full deck creation/editing screens.
+- Deck/ruleset persistence is currently represented by the in-memory domain store; durable Unity profile persistence and community/server sharing endpoints are not implemented.
+- Objective-based victory, arbitrary custom card effect parameters, and online leaderboard submission remain future work.
+
+Prompt 05 mode-runtime mechanics are implemented and .NET verified. Overall Prompt 05 acceptance remains **NEEDS REVISION** until the remaining client persistence/editor and Unity verification gates pass.
