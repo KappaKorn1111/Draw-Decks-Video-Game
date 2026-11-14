@@ -1,5 +1,7 @@
+#nullable enable
 using System;
-namespace DrawDecks.Domain;
+namespace DrawDecks.Domain
+{
 public enum Suit { None=-1, Clubs=0, Diamonds=1, Hearts=2, Spades=3 }
 public enum CardRarity { Common, Uncommon, Rare, Epic, Legendary }
 public enum CardKind { Standard, Action, Attack, Defense, Special }
@@ -19,4 +21,5 @@ public sealed class CardInstance : IEquatable<CardInstance> {
  public bool Equals(CardInstance? other)=>other!=null&&InstanceId==other.InstanceId;
  public override bool Equals(object? obj)=>Equals(obj as CardInstance);
  public override int GetHashCode()=>InstanceId.GetHashCode(StringComparison.Ordinal);
+}
 }
