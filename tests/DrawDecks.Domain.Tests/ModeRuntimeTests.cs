@@ -104,7 +104,7 @@ public sealed class ModeRuntimeTests
     public void SurvivalClearsWaveAwardsScoreAndCompletesAtConfiguredWaveLimit()
     {
         var match = CreateWithStrikeInHumanHand(GameMode.Survival, startingHealth: 5, survivalMaximumWaves: 1);
-        var strike = match.Players[0].Hand.Single(card => card.DefinitionId == "attack-damage");
+        var strike = match.Players[0].Hand.First(card => card.DefinitionId == "attack-damage");
 
         Assert.True(GameEngine.PlayCard(match, "human", strike.InstanceId, "cpu").Success);
         Assert.True(GameEngine.RespondToAttack(match, "cpu", null).Success);
@@ -121,7 +121,7 @@ public sealed class ModeRuntimeTests
     public void SurvivalAdvancesWaveAndScalesCpuHealthWhenUnlimitedWavesConfigured()
     {
         var match = CreateWithStrikeInHumanHand(GameMode.Survival, startingHealth: 5, survivalMaximumWaves: 0);
-        var strike = match.Players[0].Hand.Single(card => card.DefinitionId == "attack-damage");
+        var strike = match.Players[0].Hand.First(card => card.DefinitionId == "attack-damage");
 
         Assert.True(GameEngine.PlayCard(match, "human", strike.InstanceId, "cpu").Success);
         Assert.True(GameEngine.RespondToAttack(match, "cpu", null).Success);
@@ -138,7 +138,7 @@ public sealed class ModeRuntimeTests
     public void DamageAndTeamStateAreDeterministicallyReplayable()
     {
         var match = CreateWithStrikeInHumanHand(GameMode.Elimination);
-        var strike = match.Players[0].Hand.Single(card => card.DefinitionId == "attack-damage");
+        var strike = match.Players[0].Hand.First(card => card.DefinitionId == "attack-damage");
         Assert.True(GameEngine.PlayCard(match, "human", strike.InstanceId, "cpu").Success);
         Assert.True(GameEngine.RespondToAttack(match, "cpu", null).Success);
 
