@@ -1,7 +1,9 @@
+#nullable enable
 using System;
 using System.Linq;
 
-namespace DrawDecks.Domain;
+namespace DrawDecks.Domain
+{
 
 public static class MatchReplay
 {
@@ -68,4 +70,5 @@ public static class MatchReplay
         }
         return left.DiscardPile.Select(c => c.InstanceId).SequenceEqual(right.DiscardPile.Select(c => c.InstanceId)) && left.DrawPile.Select(c => c.InstanceId).SequenceEqual(right.DrawPile.Select(c => c.InstanceId)) && ((left.PendingAttack == null && right.PendingAttack == null) || (left.PendingAttack != null && right.PendingAttack != null && left.PendingAttack.AttackerId == right.PendingAttack.AttackerId && left.PendingAttack.TargetId == right.PendingAttack.TargetId && left.PendingAttack.Effect == right.PendingAttack.Effect));
     }
+}
 }
