@@ -125,7 +125,7 @@ public sealed class CustomizationTests
     }
 
     [Fact]
-    public void ConfiguredMatchFactoryRejectsUnsupportedRuntimeModeInsteadOfSilentlyStartingClassic()
+    public void ConfiguredMatchFactoryCreatesEliminationMatchWithHealthEnabled()
     {
         var catalog = Catalog();
         var ids = catalog.Definitions.Where(card => card.Id.StartsWith("standard-", System.StringComparison.Ordinal))
@@ -138,9 +138,11 @@ public sealed class CustomizationTests
             new SeatDefinition("cpu", "CPU", SeatKind.Cpu)
         };
 
-        var result = ConfiguredMatchFactory.Create("blocked-mode", 42, seats, catalog, deck, rules);
+        var result = ConfiguredMatchFactory.Create("elimination-match", 42, seats, catalog, deck, rules);
 
-        Assert.False(result.Success);
-        Assert.Contains(result.Errors, error => error.Contains("runtime rules are not implemented"));
+        Assert.True(result.Success, string.Join(" | ", result.Errors));
+        Assert.NotNull(result.Match);
+        Assert.Equal(GameMode.Elimination, result.Match!.Rules.Mode);
+        Assert.Equal(20, result.Match.Players[0].Health);
     }
 }
