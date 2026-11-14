@@ -102,6 +102,7 @@ namespace DrawDecks.Client.Gameplay
         private void Start()
         {
             LoadStatistics();
+            timerIndex = PlayerPrefs.GetInt("DrawDecks.DefaultTimer", 1) == 1 ? 0 : 2;
             ShowMainMenu();
         }
 
@@ -601,6 +602,7 @@ namespace DrawDecks.Client.Gameplay
             }
 
             bool hasMultipleHumans = match.Players.Count(p => p.Kind == SeatKind.Human && !p.IsEliminated) > 1;
+            if (!hasMultipleHumans) handoffAcknowledgedId = current.Id;
             if (hasMultipleHumans && handoffAcknowledgedId != current.Id)
             {
                 ShowHandoff(current);
@@ -614,7 +616,7 @@ namespace DrawDecks.Client.Gameplay
             BeginPage("Hot-Seat Handoff", "Private handoff. The previous player's hand is hidden until the next player is ready.");
             CreateText(pageBody, "PASS THE DEVICE TO", 20, TextMuted, TextAnchor.MiddleCenter, 44f, style: FontStyle.Bold);
             CreateText(pageBody, player.DisplayName, 38, Gold, TextAnchor.MiddleCenter, 86f, style: FontStyle.Bold);
-            CreateText(pageBody, "Seat " + (match.Players.IndexOf(player) + 1) +
+            CreateText(pageBody, "Seat " + (match.Players.ToList().FindIndex(p => p.Id == player.Id) + 1) +
                 "  ·  Your hand will be shown only after you confirm.", 18, TextPrimary, TextAnchor.MiddleCenter, 56f);
             CreateButton(pageBody, "I'M READY — SHOW MY HAND", () =>
             {
