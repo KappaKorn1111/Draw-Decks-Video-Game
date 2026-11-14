@@ -396,10 +396,19 @@ namespace DrawDecks.Client.Gameplay
             var row2 = CreateRow(pageBody, 58f);
             CreateButton(row2, "SETTINGS", ShowSettings, 58f);
             CreateButton(row2, "SUPPORT THE PROJECT", ShowSupport, 58f);
-            CreateButton(row2, "EXIT", () => Application.Quit(), 58f, background: Danger);
+            CreateButton(row2, "EXIT", ExitApplication, 58f, background: Danger);
             CreateText(screenRoot, "LOCAL PLAYABLE BUILD  ·  1–4 SEATS  ·  HUMAN + CPU", 14, TextMuted,
                 TextAnchor.MiddleCenter, 28f, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
                 new Vector2(0f, 18f), new Vector2(900f, 28f));
+        }
+
+        private void ExitApplication()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         private void ShowMatchSetup(bool soloPractice)
