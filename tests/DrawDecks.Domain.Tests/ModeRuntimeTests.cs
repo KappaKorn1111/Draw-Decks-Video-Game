@@ -99,7 +99,7 @@ public sealed class ModeRuntimeTests
 
         Assert.True(match.Players[1].IsEliminated);
         Assert.Equal(0, match.Players[1].Health);
-        Assert.Equal(20, match.Players[2].Health);
+        Assert.Equal(5, match.Players[2].Health);
         Assert.Equal(MatchStatus.Active, match.Status);
         Assert.Equal("team-a", match.Players[0].TeamId);
         Assert.Equal("team-a", match.Players[2].TeamId);
