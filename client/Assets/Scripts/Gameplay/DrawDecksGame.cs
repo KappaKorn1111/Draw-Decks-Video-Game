@@ -649,6 +649,10 @@ namespace DrawDecks.Client.Gameplay
             }
             CreateText(pageBody, string.Join("     |     ", scoreboard), 17, TextPrimary,
                 TextAnchor.MiddleCenter, 58f);
+            var opponentHands = match.Players.Where(p => p.Id != current.Id && !p.IsEliminated)
+                .Select(p => p.DisplayName + "  ·  FACE-DOWN × " + p.Hand.Count);
+            CreateText(pageBody, "OPPONENT HANDS  ·  " + string.Join("     |     ", opponentHands), 14,
+                TextMuted, TextAnchor.MiddleCenter, 30f);
 
             var boardRow = CreateRow(pageBody, 88f);
             CreateText(boardRow, "DRAW PILE\n" + match.DrawPileCount + " cards", 18, TextPrimary,
@@ -676,6 +680,7 @@ namespace DrawDecks.Client.Gameplay
             CreateText(pageBody, current.DisplayName.ToUpperInvariant() + "  ·  YOUR HAND", 18, Gold,
                 TextAnchor.MiddleLeft, 34f, style: FontStyle.Bold);
             var handRow = CreateRow(pageBody, 112f, 8f);
+            int cardIndex = 0;
             foreach (var card in current.Hand)
             {
                 bool legal = IsCardLegal(card);
@@ -692,6 +697,7 @@ namespace DrawDecks.Client.Gameplay
                         RefreshGameplay();
                     }, 104f, background: cardColor);
                 cardButton.GetComponentInChildren<Text>().fontSize = 15;
+                StartCoroutine(CardReveal(cardButton.transform, cardIndex++ * 0.025f));
             }
 
             if (current.Hand.Count == 0)
@@ -720,6 +726,22 @@ namespace DrawDecks.Client.Gameplay
                     (string.IsNullOrWhiteSpace(e.Data) ? "" : "  ·  " + e.Data));
             CreateText(pageBody, "MATCH HISTORY\n" + string.Join("\n", events), 13, TextMuted,
                 TextAnchor.MiddleLeft, 84f);
+        }
+
+        private IEnumerator CardReveal(Transform card, float delay)
+        {
+            if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
+            if (card == null) yield break;
+            card.localScale = Vector3.one * 0.92f;
+            float elapsed = 0f;
+            while (elapsed < 0.13f && card != null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float progress = Mathf.Clamp01(elapsed / 0.13f);
+                card.localScale = Vector3.Lerp(Vector3.one * 0.92f, Vector3.one, progress);
+                yield return null;
+            }
+            if (card != null) card.localScale = Vector3.one;
         }
 
         private bool IsCardLegal(CardInstance card)
