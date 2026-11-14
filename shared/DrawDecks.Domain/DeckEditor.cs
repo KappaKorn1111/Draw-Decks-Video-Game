@@ -214,12 +214,6 @@ namespace DrawDecks.Domain
             }
             if (errors.Count > 0) return new ConfiguredMatchResult(null, errors.Distinct(StringComparer.Ordinal));
 
-            if (profile.Mode != GameMode.Classic && profile.Mode != GameMode.Custom)
-                return new ConfiguredMatchResult(null, new[]
-                {
-                    profile.Mode + " is configured and validated, but its dedicated runtime rules are not implemented yet."
-                });
-
             try
             {
                 var match = MatchFactory.Create(matchId, seed, seats, catalog,
