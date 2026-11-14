@@ -27,7 +27,7 @@
 - The local Unity client raises CPU difficulty every two waves and shortens thinking delay as the run progresses.
 - A configured maximum wave count completes the run; zero means an endless run until the human survivor is defeated. The Survival draw engine recycles and deterministically shuffles the discard pile when the draw pile is exhausted.
 - Survival score includes points from scoring cards and the configured reward for each CPU defeated.
-- `SurvivalLeaderboardEntry` is a stable, privacy-safe result projection (match ID, player ID, score, waves, seed, catalog/rules version). `SurvivalLeaderboard.Rank` provides deterministic score ordering.
+- `SurvivalLeaderboardEntry` is a stable, privacy-safe result projection (match ID, player ID, score, waves, seed, catalog version). `SurvivalLeaderboard.Rank` provides deterministic score ordering.
 - The Unity client stores a local personal-best survival score in PlayerPrefs.
 
 ## Unity client integration
