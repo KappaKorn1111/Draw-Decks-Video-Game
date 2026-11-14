@@ -1,0 +1,10 @@
+#nullable enable
+using System;
+using System.Collections.Generic;
+using System.Linq;
+namespace DrawDecks.Domain
+{
+public static class MatchFactory {
+ public static MatchState Create(string matchId,ulong seed,IReadOnlyList<SeatDefinition> seats,CardCatalog? catalog=null,Ruleset? rules=null,IEnumerable<string>? deckDefinitionIds=null){if(string.IsNullOrWhiteSpace(matchId))throw new ArgumentException("Match id required.");if(seats==null)throw new ArgumentNullException(nameof(seats));catalog??=CardCatalog.CreateDefault();rules??=Ruleset.Default;if(seats.Count<2||seats.Count>rules.MaximumPlayers)throw new ArgumentOutOfRangeException(nameof(seats),"Matches require 2–4 seats within the selected ruleset.");if(seats.Any(s=>s==null)||!seats.Any(s=>s.Kind==SeatKind.Human))throw new ArgumentException("At least one human seat required.");if(seats.Select(s=>s.Id).Distinct(StringComparer.Ordinal).Count()!=seats.Count)throw new ArgumentException("Seat ids must be unique.");var ids=deckDefinitionIds?.ToArray()??catalog.Definitions.Select(d=>d.Id).ToArray();var deck=DeckBuilder.Create(catalog,ids,seed);if(deck.Count<seats.Count*rules.StartingHandSize)throw new ArgumentException("Deck too small for starting hands.");var players=seats.Select(s=>new PlayerState(s)).ToList();foreach(var p in players)for(int i=0;i<rules.StartingHandSize;i++){p.MutableHand.Add(deck[0]);deck.RemoveAt(0);}var state=new MatchState(matchId,seed,catalog.Version,rules,players,deck,seats.ToList(),ids.ToList());state.Emit("MatchCreated",players[0].Id,data:"seed="+seed);state.Emit("CardsDealt",players[0].Id,data:"hand="+rules.StartingHandSize);return state;}
+}
+}

@@ -1,0 +1,8 @@
+{
+  "name": "com.drawdecks.domain",
+  "version": "1.0.0",
+  "displayName": "Draw Decks Domain",
+  "description": "Shared deterministic card game rules and match state for Draw Decks clients and servers.",
+  "unity": "6000.3",
+  "license": "UNLICENSED"
+}
