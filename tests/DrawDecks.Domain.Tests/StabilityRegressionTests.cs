@@ -151,6 +151,7 @@ public sealed class StabilityRegressionTests
         Assert.Equal("p0", match.WinnerPlayerId);
         Assert.Contains(match.Events, gameEvent => gameEvent.Type == "SuddenScoreStarted");
         Assert.Contains(match.Events, gameEvent => gameEvent.Type == "MatchWon" && gameEvent.Data == "sudden-score");
+        Assert.Single(match.Events.Where(gameEvent => gameEvent.Type == "MatchWon" || gameEvent.Type == "MatchDraw"));
     }
 
     [Fact]
@@ -181,6 +182,7 @@ public sealed class StabilityRegressionTests
 
         Assert.Equal(MatchStatus.Draw, match.Status);
         Assert.Null(match.WinnerPlayerId);
+        Assert.Single(match.Events.Where(gameEvent => gameEvent.Type == "MatchWon" || gameEvent.Type == "MatchDraw"));
     }
 
     [Fact]
