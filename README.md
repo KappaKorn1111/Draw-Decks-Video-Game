@@ -4,9 +4,9 @@ A strategy card game for 2–4 total seats, supporting human and CPU players.
 
 ## Current milestone
 
-Phase 4 — CPU Opponents & Intelligent Game AI. The shared C# domain includes four CPU difficulty levels, legal-action candidate generation, hidden-information-safe observations, seeded decision-making, bounded planning/evaluation controls, and match simulation tests. The Unity client exposes per-seat CPU difficulty, thinking delay, and AI budget controls.
+Phase 4 — CPU Opponents & Intelligent Game AI, followed by a stabilization pass. The shared C# domain includes four CPU difficulty levels, legal-action candidate generation, hidden-information-safe observations, seeded decision-making, turn-order/skip/replay safeguards, deck-exhaustion and maximum-turn termination, and automated match simulations.
 
-See [CPU AI](docs/CPU_AI.md), [Local Client](docs/LOCAL_CLIENT.md), [Project Status](docs/PROJECT_STATUS.md), the [rulebook](docs/RULEBOOK.md), and [implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md).
+See [CPU AI](docs/CPU_AI.md), [Stabilization Audit](docs/STABILIZATION_AUDIT.md), [Local Client](docs/LOCAL_CLIENT.md), [Project Status](docs/PROJECT_STATUS.md), the [target rulebook](docs/RULEBOOK.md), and [implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md).
 
 ## Architecture
 
@@ -42,7 +42,7 @@ The .NET CI workflow validates the shared domain, CPU AI, and automated match si
 
 ## Known scope
 
-Online multiplayer, LAN discovery, authentication, chat, persistent match hosting, and real payment/support integrations are not active in the local playable milestone. Effect stacking is disabled by the current ruleset.
+Online multiplayer, LAN discovery, authentication, chat, persistent match hosting, and real payment/support integrations are not active in the local playable milestone. Effect stacking is disabled by the current ruleset. The Confluence rulebook is a target specification; its full vitality, combat, combo, and scoring mechanics are not yet implemented.
 
 ## Security
 
