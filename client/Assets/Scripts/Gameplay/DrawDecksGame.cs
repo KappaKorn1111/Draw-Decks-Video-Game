@@ -440,8 +440,11 @@ namespace DrawDecks.Client.Gameplay
             {
                 playerCount = Mathf.Clamp(playerCount, 2, 4);
                 slotKinds[0] = SeatKind.Human;
-                if (slotKinds[1] == SeatKind.Human && playerCount == 2) { }
-                else if (slotKinds[1] != SeatKind.Human) slotKinds[1] = SeatKind.Human;
+                if ((GameMode)gameModeIndex != GameMode.TeamBattle &&
+                    (GameMode)gameModeIndex != GameMode.Survival)
+                {
+                    if (slotKinds[1] != SeatKind.Human) slotKinds[1] = SeatKind.Human;
+                }
                 slotNames[0] = string.IsNullOrWhiteSpace(slotNames[0]) ? defaultNames[0] : slotNames[0];
                 slotNames[1] = string.IsNullOrWhiteSpace(slotNames[1]) ? defaultNames[1] : slotNames[1];
             }
@@ -787,7 +790,10 @@ namespace DrawDecks.Client.Gameplay
             var current = match.CurrentPlayer;
             BeginPage("Draw Decks  ·  Match", current.DisplayName + " is active. Select a card to inspect its legal action.");
             var topRow = CreateRow(pageBody, 52f);
-            CreateText(topRow, "TURN " + match.TurnNumber, 17, Gold, TextAnchor.MiddleCenter, 48f);
+            string modeStatus = match.Rules.Mode == GameMode.Survival
+                ? "WAVE " + match.SurvivalWave + "  ·  SURVIVAL " + match.SurvivalScore
+                : "TURN " + match.TurnNumber;
+            CreateText(topRow, modeStatus, 17, Gold, TextAnchor.MiddleCenter, 48f);
             timerText = CreateText(topRow, turnTimeSeconds <= 0f ? "TURN TIMER  OFF" :
                 "TURN TIMER  " + Mathf.CeilToInt(turnTimeRemaining) + "s", 17, TextPrimary, TextAnchor.MiddleCenter, 48f);
             CreateButton(topRow, "PAUSE", ShowPauseMenu, 48f, 150f);
@@ -799,11 +805,22 @@ namespace DrawDecks.Client.Gameplay
                 string cpuLevel = player.Kind == SeatKind.Cpu && cpuDifficulties.ContainsKey(player.Id)
                     ? " / " + cpuDifficulties[player.Id].ToString().ToUpperInvariant()
                     : "";
-                scoreboard.Add(player.DisplayName + "  ·  " + status + cpuLevel + "  ·  " + player.Score +
+                string health = (match.Rules.Mode == GameMode.Elimination ||
+                    match.Rules.Mode == GameMode.TeamBattle || match.Rules.Mode == GameMode.Survival)
+                    ? "  ·  " + player.Health + " HP" : "";
+                string team = match.Rules.Mode == GameMode.TeamBattle ? "  ·  " + player.TeamId : "";
+                scoreboard.Add(player.DisplayName + team + "  ·  " + status + cpuLevel + health + "  ·  " + player.Score +
                     " pts  ·  " + player.Hand.Count + " cards");
             }
             CreateText(pageBody, string.Join("     |     ", scoreboard), 17, TextPrimary,
-                TextAnchor.MiddleCenter, 58f);
+                TextAnchor.MiddleCenter, 72f);
+            if (match.Rules.Mode == GameMode.TeamBattle)
+                CreateText(pageBody, "TEAM SCORE  ·  " + string.Join("     |     ",
+                    match.TeamScores.Select(pair => pair.Key + "  " + pair.Value + " pts")),
+                    17, Gold, TextAnchor.MiddleCenter, 36f);
+            if (match.Rules.Mode == GameMode.Survival)
+                CreateText(pageBody, "SURVIVAL PROGRESS  ·  " + match.CpuDefeatedThisWave +
+                    " CPU OPPONENTS DEFEATED THIS WAVE", 15, Accent, TextAnchor.MiddleCenter, 32f);
             var opponentHands = match.Players.Where(p => p.Id != current.Id && !p.IsEliminated)
                 .Select(p => p.DisplayName + "  ·  FACE-DOWN × " + p.Hand.Count);
             CreateText(pageBody, "OPPONENT HANDS  ·  " + string.Join("     |     ", opponentHands), 14,
@@ -1232,16 +1249,30 @@ namespace DrawDecks.Client.Gameplay
             resultsRecorded = true;
             matchesPlayed++;
             var winner = match.WinnerPlayerId == null ? null : match.Players.FirstOrDefault(p => p.Id == match.WinnerPlayerId);
-            if (winner != null && winner.Kind == SeatKind.Human) wins++;
-            else if (winner != null) losses++;
+            bool humanTeamWon = match.WinnerTeamId != null &&
+                match.Players.Any(player => player.Kind == SeatKind.Human && player.TeamId == match.WinnerTeamId);
+            if ((winner != null && winner.Kind == SeatKind.Human) || humanTeamWon) wins++;
+            else if (winner != null || match.WinnerTeamId != null) losses++;
             SaveStatistics();
 
-            BeginPage("Match Results", match.Status == MatchStatus.Draw ? "The match ended in a draw." :
-                (winner == null ? "Match completed." : winner.DisplayName + " wins the match."));
-            CreateText(pageBody, winner == null ? "DRAW" : winner.DisplayName.ToUpperInvariant() + "  ·  WINNER",
+            string winnerText = match.WinnerTeamId != null ? match.WinnerTeamId.ToUpperInvariant() + " WINS" :
+                winner == null ? (match.Rules.Mode == GameMode.Survival && match.Status == MatchStatus.Completed ? "SURVIVAL RUN ENDED" : "DRAW") :
+                winner.DisplayName + " wins the match.";
+            BeginPage("Match Results", winnerText);
+            CreateText(pageBody, match.WinnerTeamId != null ? winnerText :
+                winner == null ? (match.Rules.Mode == GameMode.Survival ? "SURVIVAL SCORE  ·  " + match.SurvivalScore : "DRAW") :
+                winner.DisplayName.ToUpperInvariant() + "  ·  WINNER",
                 32, Gold, TextAnchor.MiddleCenter, 78f, style: FontStyle.Bold);
+            if (match.Rules.Mode == GameMode.Survival)
+                CreateText(pageBody, "WAVES CLEARED  ·  " + match.SurvivalWave +
+                    "     ·     SURVIVAL SCORE  ·  " + match.SurvivalScore,
+                    20, Accent, TextAnchor.MiddleCenter, 48f);
+            if (match.Rules.Mode == GameMode.TeamBattle)
+                CreateText(pageBody, "TEAM SCORES  ·  " + string.Join("     |     ",
+                    match.TeamScores.Select(pair => pair.Key + "  " + pair.Value)),
+                    18, Gold, TextAnchor.MiddleCenter, 44f);
             CreateText(pageBody, string.Join("\n", match.Players.Select(p =>
-                p.DisplayName + "  ·  " + p.Score + " points  ·  " + p.Hand.Count + " cards remaining" +
+                p.DisplayName + "  ·  " + p.Score + " points  ·  " + p.Health + " HP  ·  " + p.Hand.Count + " cards remaining" +
                 (p.IsEliminated ? "  ·  ELIMINATED" : ""))), 20, TextPrimary, TextAnchor.MiddleCenter, 150f);
             CreateText(pageBody, "Turns: " + match.TurnNumber + "  ·  Events: " + match.Events.Count +
                 "  ·  Seed: " + match.Seed, 15, TextMuted, TextAnchor.MiddleCenter, 38f);
