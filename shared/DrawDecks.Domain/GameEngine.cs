@@ -104,16 +104,17 @@ public static partial class GameEngine {
   s.ConsecutiveNonScoringTurns[completingPlayer.Id]=s.TurnHadScoringAction?0:previousStreak+1;
   s.TurnHadScoringAction=false;
 
-  if(s.DrawPile.Count==0)
+  var livingPlayers=s.MutablePlayers.Where(player=>!player.IsEliminated).ToArray();
+  bool deckExhaustedAndStalled=s.DrawPile.Count==0&&livingPlayers.Length>0&&livingPlayers.All(player=>
+   s.ConsecutiveNonScoringTurns.TryGetValue(player.Id,out var count)&&count>=2);
+  bool turnLimitReached=s.TurnNumber>=s.Rules.MaximumTurns;
+
+  if(deckExhaustedAndStalled||turnLimitReached)
   {
-   var living=s.MutablePlayers.Where(player=>!player.IsEliminated).ToArray();
-   if(living.Length>0&&living.All(player=>
-      s.ConsecutiveNonScoringTurns.TryGetValue(player.Id,out var count)&&count>=2))
-   {
-    CheckVictory(s);
-    if(s.Status==MatchStatus.Active)ResolveSuddenScore(s);
-    if(s.Status!=MatchStatus.Active)return;
-   }
+   CheckVictory(s);
+   if(s.Status==MatchStatus.Active)
+    ResolveSuddenScore(s,turnLimitReached?"maximum-turn-limit":"deck-exhausted-and-stalled");
+   if(s.Status!=MatchStatus.Active)return;
   }
 
   int seatCount=s.MutablePlayers.Count;
@@ -146,7 +147,7 @@ public static partial class GameEngine {
   s.Emit("TurnStarted",s.CurrentPlayer.Id,data:"turn="+s.TurnNumber);
  }
 
- private static void ResolveSuddenScore(MatchState s)
+ private static void ResolveSuddenScore(MatchState s,string reason)
  {
   var leaders=s.MutablePlayers
    .Where(player=>!player.IsEliminated)
@@ -154,7 +155,7 @@ public static partial class GameEngine {
    .ThenByDescending(player=>player.Hand.Count)
    .ToArray();
 
-  s.Emit("SuddenScoreStarted","system",data:"deck-exhausted-and-stalled");
+  s.Emit("SuddenScoreStarted","system",data:reason);
   if(leaders.Length==0)
   {
    s.Status=MatchStatus.Draw;
