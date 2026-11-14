@@ -107,3 +107,14 @@ Prompt 05 acceptance remains **NEEDS REVISION**. See [Customization System](CUST
 - Objective-based victory, arbitrary custom card effect parameters, and online leaderboard submission remain future work.
 
 Prompt 05 mode-runtime mechanics are implemented and .NET verified. Overall Prompt 05 acceptance remains **NEEDS REVISION** until the remaining client persistence/editor and Unity verification gates pass.
+
+
+## Phase 5 follow-up — interactive customization and local persistence
+
+- Replaced the preset-only Deck Builder screen with a scrollable catalog editor, per-card quantity controls, named deck profiles, save/load/delete, and deck-size validation (30–120 cards; up to four copies per catalog definition).
+- Added an interactive Custom Rules Editor for mode, target score, starting/max hand, maximum players, starting health, damage per hit, Survival wave limit, and CPU defeat reward. Numeric ranges and hand-limit relationships are checked before saving.
+- Added versioned JSON device-local persistence for deck/rules profiles using PlayerPrefs. Saves retain the previous valid payload as a recovery copy; load falls back to that backup if the active JSON cannot be parsed. Selected profile IDs survive application restarts.
+- Match creation now consumes the selected deck profile and rules profile values. The match setup mode selector remains an explicit override for the selected rules profile's mode.
+- New client source: `client/Assets/Scripts/Gameplay/LocalCustomizationStore.cs`.
+- Unity runtime validation is still pending: no Unity Editor/Play Mode process is available in this execution environment. The hosted .NET workflow does not compile Unity MonoBehaviours.
+- Known acceptance limits: no cloud sync/community sharing; no server persistence; no formal schema migration beyond the current versioned v1 payload and backup fallback; per-card quantity UI uses a four-copy ceiling and should be reconciled with any catalog definition whose configured maximum is lower.
