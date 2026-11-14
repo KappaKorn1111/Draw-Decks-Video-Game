@@ -47,7 +47,7 @@ public sealed class ModeRuntimeTests
     public void EliminationStrikeDamagesAndEliminatesPlayerAtZeroHealth()
     {
         var match = CreateWithStrikeInHumanHand(GameMode.Elimination);
-        var strike = match.Players[0].Hand.Single(card => card.DefinitionId == "attack-damage");
+        var strike = match.Players[0].Hand.First(card => card.DefinitionId == "attack-damage");
 
         Assert.True(GameEngine.PlayCard(match, "human", strike.InstanceId, "cpu").Success);
         Assert.NotNull(match.PendingAttack);
