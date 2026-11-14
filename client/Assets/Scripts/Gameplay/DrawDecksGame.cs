@@ -442,7 +442,8 @@ namespace DrawDecks.Client.Gameplay
                 playerCount = Mathf.Clamp(playerCount, 2, 4);
                 slotKinds[0] = SeatKind.Human;
                 if ((GameMode)gameModeIndex != GameMode.TeamBattle &&
-                    (GameMode)gameModeIndex != GameMode.Survival)
+                    (GameMode)gameModeIndex != GameMode.Survival &&
+                    (GameMode)gameModeIndex != GameMode.Elimination)
                 {
                     if (slotKinds[1] != SeatKind.Human) slotKinds[1] = SeatKind.Human;
                 }
