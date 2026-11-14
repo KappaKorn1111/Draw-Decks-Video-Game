@@ -80,20 +80,20 @@ public static partial class GameEngine {
   return Ok(state);
  }
  private static void Resolve(MatchState s,PlayerState p,CardInstance c,PlayerState? target){switch(c.Definition.Effect){
- case CardEffect.None:p.Score+=c.Definition.Value*(s.DoubleScoreActive?2:1);s.DoubleScoreActive=false;break;
+ case CardEffect.None:AwardScore(s,p,c.Definition.Value*(s.DoubleScoreActive?2:1));s.DoubleScoreActive=false;break;
  case CardEffect.DrawTwo:for(int i=0;i<2&&p.MutableHand.Count<s.Rules.MaximumHandSize&&s.DrawPile.Count>0;i++)DrawOne(s,p);break;
  case CardEffect.SkipTurn:if(target!=null)s.PendingSkipPlayerIds.Add(target.Id);s.Emit("SkipQueued",p.Id,c.InstanceId,target?.Id);break;
  case CardEffect.ReverseOrder:s.Direction*=-1;break;
  case CardEffect.SwapHands:if(target!=null){var temp=p.MutableHand.ToArray();p.MutableHand.Clear();p.MutableHand.AddRange(target.MutableHand);target.MutableHand.Clear();target.MutableHand.AddRange(temp);}break;
- case CardEffect.StealCard:case CardEffect.DiscardRandomCard:case CardEffect.BlockDraw:s.PendingAttack=new PendingAttack(p.Id,target!.Id,c.Definition.Effect,c.InstanceId);s.CurrentPlayerIndex=s.MutablePlayers.IndexOf(target);break;
+ case CardEffect.StealCard:case CardEffect.DiscardRandomCard:case CardEffect.BlockDraw:case CardEffect.Damage:s.PendingAttack=new PendingAttack(p.Id,target!.Id,c.Definition.Effect,c.InstanceId);s.CurrentPlayerIndex=s.MutablePlayers.IndexOf(target);break;
  case CardEffect.Wild:break;
  case CardEffect.DeckReset:if(s.MutableDiscardPile.Count>0){var recycled=s.MutableDiscardPile.ToList();s.MutableDiscardPile.Clear();DeckBuilder.Shuffle(recycled,NextRandom(s));s.DrawPile.AddRange(recycled);}break;
  case CardEffect.DoubleScore:s.DoubleScoreActive=true;break;
  case CardEffect.Shield:case CardEffect.Reflect:case CardEffect.Negate:break;
  default:throw new InvalidOperationException("Unimplemented effect "+c.Definition.Effect);
  }}
- private static void ApplyAttack(MatchState s,string targetId,CardEffect effect,string attackerId){var target=s.MutablePlayers.First(x=>x.Id==targetId);switch(effect){case CardEffect.StealCard:if(target.MutableHand.Count>0){var card=target.MutableHand[0];target.MutableHand.RemoveAt(0);var attacker=s.MutablePlayers.First(x=>x.Id==attackerId);if(attacker.MutableHand.Count<s.Rules.MaximumHandSize)attacker.MutableHand.Add(card);else s.MutableDiscardPile.Add(card);}break;case CardEffect.DiscardRandomCard:if(target.MutableHand.Count>0){int i=(int)(NextRandom(s)%(ulong)target.MutableHand.Count);var card=target.MutableHand[i];target.MutableHand.RemoveAt(i);s.MutableDiscardPile.Add(card);}break;case CardEffect.BlockDraw: s.BlockedDrawPlayerId=targetId;break;}s.Emit("AttackResolved",attackerId,null,targetId,effect.ToString());}
- private static bool IsAttack(CardEffect e)=>e==CardEffect.StealCard||e==CardEffect.DiscardRandomCard||e==CardEffect.BlockDraw;
+ private static void ApplyAttack(MatchState s,string targetId,CardEffect effect,string attackerId){var target=s.MutablePlayers.First(x=>x.Id==targetId);switch(effect){case CardEffect.StealCard:if(target.MutableHand.Count>0){var card=target.MutableHand[0];target.MutableHand.RemoveAt(0);var attacker=s.MutablePlayers.First(x=>x.Id==attackerId);if(attacker.MutableHand.Count<s.Rules.MaximumHandSize)attacker.MutableHand.Add(card);else s.MutableDiscardPile.Add(card);}break;case CardEffect.DiscardRandomCard:if(target.MutableHand.Count>0){int i=(int)(NextRandom(s)%(ulong)target.MutableHand.Count);var card=target.MutableHand[i];target.MutableHand.RemoveAt(i);s.MutableDiscardPile.Add(card);}break;case CardEffect.BlockDraw: s.BlockedDrawPlayerId=targetId;break;case CardEffect.Damage: if(s.Rules.Mode==GameMode.Elimination||s.Rules.Mode==GameMode.TeamBattle||s.Rules.Mode==GameMode.Survival){target.Health=Math.Max(0,target.Health-Math.Max(1,s.Rules.DamagePerHit));s.Emit("PlayerDamaged",attackerId,null,targetId,"damage="+Math.Max(1,s.Rules.DamagePerHit)+";health="+target.Health);if(target.Health==0){target.IsEliminated=true;s.PendingSkipPlayerIds.Remove(target.Id);s.Emit("PlayerEliminated",attackerId,null,targetId,"health-depleted");if(s.Rules.Mode==GameMode.Survival&&target.Kind==SeatKind.Cpu){s.CpuDefeatedThisWave++;s.SurvivalScore+=s.Rules.SurvivalScorePerCpu;}}}break;}s.Emit("AttackResolved",attackerId,null,targetId,effect.ToString());}
+ private static bool IsAttack(CardEffect e)=>e==CardEffect.StealCard||e==CardEffect.DiscardRandomCard||e==CardEffect.BlockDraw||e==CardEffect.Damage;
  private static void DrawOne(MatchState s,PlayerState p){if(s.DrawPile.Count==0)return;var c=s.DrawPile[0];s.DrawPile.RemoveAt(0);p.MutableHand.Add(c);}
  private static void Advance(MatchState s)
  {
@@ -174,7 +174,72 @@ public static partial class GameEngine {
   s.WinnerPlayerId=leaders[0].Id;
   s.Emit("MatchWon",leaders[0].Id,data:"sudden-score");
  }
- private static void CheckVictory(MatchState s){if(s.Status!=MatchStatus.Active)return;var alive=s.MutablePlayers.Where(p=>!p.IsEliminated).ToArray();if(alive.Length==1){s.Status=MatchStatus.Completed;s.WinnerPlayerId=alive[0].Id;s.Emit("MatchWon",alive[0].Id);}else if(alive.Length==0){s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system");}else{var leaders=alive.Where(p=>p.Score>=s.Rules.TargetScore).OrderByDescending(p=>p.Score).ToArray();if(leaders.Length>0){s.Status=MatchStatus.Completed;if(leaders.Length>1&&leaders[0].Score==leaders[1].Score){s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system",data:"score-tie");}else{s.WinnerPlayerId=leaders[0].Id;s.Emit("MatchWon",leaders[0].Id,data:"target-score");}}}}
+ private static void AwardScore(MatchState state, PlayerState player, int points)
+ {
+  if(points<=0)return;
+  player.Score+=points;
+  if(state.Rules.Mode==GameMode.TeamBattle&&player.TeamId!=null)
+   state.MutableTeamScores[player.TeamId]=state.MutableTeamScores.TryGetValue(player.TeamId,out var score)?score+points:points;
+  if(state.Rules.Mode==GameMode.Survival&&player.Kind==SeatKind.Human)
+   state.SurvivalScore+=points;
+ }
+ private static void AdvanceSurvivalWave(MatchState state)
+ {
+  var human=state.MutablePlayers.FirstOrDefault(player=>player.Kind==SeatKind.Human);
+  if(human==null||human.IsEliminated)
+  {
+   state.Status=MatchStatus.Completed;
+   state.Emit("SurvivalEnded","system",data:"player-defeated;score="+state.SurvivalScore+";wave="+state.SurvivalWave);
+   return;
+  }
+  var cpus=state.MutablePlayers.Where(player=>player.Kind==SeatKind.Cpu).ToArray();
+  if(cpus.Length==0)return;
+  if(cpus.All(player=>player.IsEliminated))
+  {
+   state.Emit("SurvivalWaveCleared",human.Id,data:"wave="+state.SurvivalWave+";score="+state.SurvivalScore);
+   if(state.Rules.SurvivalMaximumWaves>0&&state.SurvivalWave>=state.Rules.SurvivalMaximumWaves)
+   {
+    state.Status=MatchStatus.Completed;
+    state.WinnerPlayerId=human.Id;
+    state.Emit("SurvivalCompleted",human.Id,data:"waves="+state.SurvivalWave+";score="+state.SurvivalScore);
+    return;
+   }
+   state.SurvivalWave++;
+   state.CpuDefeatedThisWave=0;
+   foreach(var cpu in cpus)
+   {
+    cpu.IsEliminated=false;
+    cpu.Health=state.Rules.StartingHealth+((state.SurvivalWave-1)*2);
+   }
+   state.Emit("SurvivalWaveStarted",human.Id,data:"wave="+state.SurvivalWave+";cpuHealth="+cpus[0].Health);
+  }
+ }
+ private static void CheckVictory(MatchState s)
+ {
+  if(s.Status!=MatchStatus.Active)return;
+  if(s.Rules.Mode==GameMode.Survival){AdvanceSurvivalWave(s);return;}
+  var alive=s.MutablePlayers.Where(p=>!p.IsEliminated).ToArray();
+  if(s.Rules.Mode==GameMode.TeamBattle)
+  {
+   var aliveTeams=alive.Where(p=>p.TeamId!=null).Select(p=>p.TeamId!).Distinct(StringComparer.Ordinal).ToArray();
+   if(aliveTeams.Length==1){s.Status=MatchStatus.Completed;s.WinnerTeamId=aliveTeams[0];s.Emit("TeamWon",alive[0].Id,data:"team="+aliveTeams[0]);return;}
+   if(aliveTeams.Length==0){s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system");return;}
+   var winners=s.MutableTeamScores.Where(pair=>pair.Value>=s.Rules.TargetScore).OrderByDescending(pair=>pair.Value).ToArray();
+   if(winners.Length>0)
+   {
+    if(winners.Length>1&&winners[0].Value==winners[1].Value){s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system",data:"team-score-tie");}
+    else{s.Status=MatchStatus.Completed;s.WinnerTeamId=winners[0].Key;s.Emit("TeamWon","system",data:"team="+winners[0].Key+";score="+winners[0].Value);}
+   }
+   return;
+  }
+  if(alive.Length==1){s.Status=MatchStatus.Completed;s.WinnerPlayerId=alive[0].Id;s.Emit("MatchWon",alive[0].Id);}
+  else if(alive.Length==0){s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system");}
+  else
+  {
+   var leaders=alive.Where(p=>p.Score>=s.Rules.TargetScore).OrderByDescending(p=>p.Score).ToArray();
+   if(leaders.Length>0){s.Status=MatchStatus.Completed;if(leaders.Length>1&&leaders[0].Score==leaders[1].Score){s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system",data:"score-tie");}else{s.WinnerPlayerId=leaders[0].Id;s.Emit("MatchWon",leaders[0].Id,data:"target-score");}}
+  }
+ }
  private static ActionError ValidateTurn(MatchState s,string id){if(s==null)throw new ArgumentNullException(nameof(s));if(s.Status!=MatchStatus.Active)return ActionError.MatchNotActive;if(s.PendingAttack!=null)return ActionError.InvalidPhase;if(s.CurrentPlayer.Id!=id)return s.MutablePlayers.Any(p=>p.Id==id)?ActionError.NotPlayersTurn:ActionError.InvalidPlayer;return ActionError.None;}
  private static ulong NextRandom(MatchState s){ulong x=s.RandomState;x^=x>>12;x^=x<<25;x^=x>>27;s.RandomState=x;return x*2685821657736338717UL;}
  private static ActionResult Ok(MatchState s)=>new(true,ActionError.None,s);private static ActionResult Fail(MatchState s,ActionError e)=>new(false,e,s);
