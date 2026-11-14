@@ -1,6 +1,8 @@
+#nullable enable
 using System;
 using System.Linq;
-namespace DrawDecks.Domain;
+namespace DrawDecks.Domain
+{
 public sealed class ActionResult {public bool Success{get;} public ActionError Error{get;} public MatchState State{get;} internal ActionResult(bool ok,ActionError error,MatchState state){Success=ok;Error=error;State=state;}}
 public static class GameEngine {
  public static ActionResult Draw(MatchState state,string playerId,int count=1){if(count<1)throw new ArgumentOutOfRangeException(nameof(count));var err=ValidateTurn(state,playerId);if(err!=ActionError.None)return Fail(state,err);var p=state.CurrentPlayer;if(state.BlockedDrawPlayerId==playerId){state.Emit("CommandAccepted",playerId,data:"Draw|"+count);state.BlockedDrawPlayerId=null;state.Emit("DrawBlocked",playerId);return Ok(state);}if(p.MutableHand.Count+count>state.Rules.MaximumHandSize)return Fail(state,ActionError.HandLimitReached);if(state.DrawPile.Count<count)return Fail(state,ActionError.DeckEmpty);state.Emit("CommandAccepted",playerId,data:"Draw|"+count);for(int i=0;i<count;i++)DrawOne(state,p);state.Emit("CardsDrawn",playerId,data:"count="+count);return Ok(state);}
@@ -30,4 +32,5 @@ public static class GameEngine {
  private static ActionError ValidateTurn(MatchState s,string id){if(s==null)throw new ArgumentNullException(nameof(s));if(s.Status!=MatchStatus.Active)return ActionError.MatchNotActive;if(s.PendingAttack!=null)return ActionError.InvalidPhase;if(s.CurrentPlayer.Id!=id)return s.MutablePlayers.Any(p=>p.Id==id)?ActionError.NotPlayersTurn:ActionError.InvalidPlayer;return ActionError.None;}
  private static ulong NextRandom(MatchState s){ulong x=s.RandomState;x^=x>>12;x^=x<<25;x^=x>>27;s.RandomState=x;return x*2685821657736338717UL;}
  private static ActionResult Ok(MatchState s)=>new(true,ActionError.None,s);private static ActionResult Fail(MatchState s,ActionError e)=>new(false,e,s);
+}
 }
