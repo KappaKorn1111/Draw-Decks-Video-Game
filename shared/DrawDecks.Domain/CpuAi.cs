@@ -476,6 +476,9 @@ namespace DrawDecks.Domain
                             reflectedHasEffect = observation.DrawPileCount > 0 &&
                                                   attacker.HandCount < observation.MaximumHandSize;
                             break;
+                        case CardEffect.Damage:
+                            reflectedHasEffect = attacker.Health > 0;
+                            break;
                     }
                 }
 
