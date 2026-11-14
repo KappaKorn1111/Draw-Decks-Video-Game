@@ -149,13 +149,32 @@ public static partial class GameEngine {
 
  private static void ResolveSuddenScore(MatchState s,string reason)
  {
-  var leaders=s.MutablePlayers
-   .Where(player=>!player.IsEliminated)
-   .OrderByDescending(player=>player.Score)
-   .ThenByDescending(player=>player.Hand.Count)
-   .ToArray();
-
   s.Emit("SuddenScoreStarted","system",data:reason);
+  var living=s.MutablePlayers.Where(player=>!player.IsEliminated).ToArray();
+  if(s.Rules.Mode==GameMode.Elimination)
+  {
+   var ranked=living.OrderByDescending(player=>player.Health).ThenByDescending(player=>player.Score)
+    .ThenByDescending(player=>player.Hand.Count).ToArray();
+   if(ranked.Length==0){s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system",data:"sudden-score-no-living-players");return;}
+   if(ranked.Length>1&&ranked[0].Health==ranked[1].Health&&ranked[0].Score==ranked[1].Score&&ranked[0].Hand.Count==ranked[1].Hand.Count)
+   {s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system",data:"elimination-health-tie");return;}
+   s.Status=MatchStatus.Completed;s.WinnerPlayerId=ranked[0].Id;
+   s.Emit("MatchWon",ranked[0].Id,data:"elimination-health-sudden-score");return;
+  }
+  if(s.Rules.Mode==GameMode.TeamBattle)
+  {
+   var teams=living.Where(player=>player.TeamId!=null).GroupBy(player=>player.TeamId!,StringComparer.Ordinal)
+    .Select(group=>new {Id=group.Key,Score=s.MutableTeamScores.TryGetValue(group.Key,out var score)?score:0,
+     Health=group.Sum(player=>player.Health),Hand=group.Sum(player=>player.Hand.Count)})
+    .OrderByDescending(team=>team.Score).ThenByDescending(team=>team.Health).ThenByDescending(team=>team.Hand).ToArray();
+   if(teams.Length==0){s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system",data:"sudden-score-no-living-teams");return;}
+   if(teams.Length>1&&teams[0].Score==teams[1].Score&&teams[0].Health==teams[1].Health&&teams[0].Hand==teams[1].Hand)
+   {s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system",data:"team-sudden-score-tie");return;}
+   s.Status=MatchStatus.Completed;s.WinnerTeamId=teams[0].Id;
+   s.Emit("TeamWon","system",data:"team="+teams[0].Id+";sudden-score");return;
+  }
+  var leaders=living.OrderByDescending(player=>player.Score)
+   .ThenByDescending(player=>player.Hand.Count).ToArray();
   if(leaders.Length==0)
   {
    s.Status=MatchStatus.Draw;
