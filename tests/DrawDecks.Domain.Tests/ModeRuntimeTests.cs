@@ -135,6 +135,35 @@ public sealed class ModeRuntimeTests
     }
 
     [Fact]
+    public void EliminationModeDoesNotUseClassicTargetScoreVictory()
+    {
+        var match = CreateWithStrikeInHumanHand(GameMode.Elimination, targetScore: 1);
+        var scoringCard = match.Players[0].Hand.First(card => card.Definition.Kind == CardKind.Standard);
+
+        Assert.True(GameEngine.PlayCard(match, "human", scoringCard.InstanceId).Success);
+
+        Assert.True(match.Players[0].Score >= 1);
+        Assert.Equal(MatchStatus.Active, match.Status);
+        Assert.Null(match.WinnerPlayerId);
+    }
+
+    [Fact]
+    public void CompletedSurvivalMatchProducesRankableLeaderboardEntry()
+    {
+        var match = CreateWithStrikeInHumanHand(GameMode.Survival, startingHealth: 5, survivalMaximumWaves: 1);
+        var strike = match.Players[0].Hand.First(card => card.DefinitionId == "attack-damage");
+        Assert.True(GameEngine.PlayCard(match, "human", strike.InstanceId, "cpu").Success);
+        Assert.True(GameEngine.RespondToAttack(match, "cpu", null).Success);
+
+        var entry = SurvivalLeaderboardEntry.FromCompletedMatch(match, "human");
+        var ranked = SurvivalLeaderboard.Rank(new[] { entry });
+
+        Assert.Equal(10, ranked[0].Score);
+        Assert.Equal(1, ranked[0].WavesCompleted);
+        Assert.Equal(match.Seed, ranked[0].Seed);
+    }
+
+    [Fact]
     public void DamageAndTeamStateAreDeterministicallyReplayable()
     {
         var match = CreateWithStrikeInHumanHand(GameMode.Elimination);
