@@ -89,6 +89,23 @@ public sealed class ModeRuntimeTests
     }
 
     [Fact]
+    public void TeamBattleStrikeEliminatesOpponentWithoutDamagingTeammate()
+    {
+        var match = CreateWithStrikeInHumanHand(GameMode.TeamBattle);
+        var strike = match.Players[0].Hand.First(card => card.DefinitionId == "attack-damage");
+
+        Assert.True(GameEngine.PlayCard(match, "human-a", strike.InstanceId, "cpu-b1").Success);
+        Assert.True(GameEngine.RespondToAttack(match, "cpu-b1", null).Success);
+
+        Assert.True(match.Players[1].IsEliminated);
+        Assert.Equal(0, match.Players[1].Health);
+        Assert.Equal(20, match.Players[2].Health);
+        Assert.Equal(MatchStatus.Active, match.Status);
+        Assert.Equal("team-a", match.Players[0].TeamId);
+        Assert.Equal("team-a", match.Players[2].TeamId);
+    }
+
+    [Fact]
     public void TeamBattleRejectsFriendlyTargetedDamage()
     {
         var match = CreateWithStrikeInHumanHand(GameMode.TeamBattle);
