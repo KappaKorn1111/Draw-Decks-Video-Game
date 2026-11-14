@@ -15,7 +15,7 @@ Legend: [x] committed; [~] scaffolded, not production-complete; [ ] not implemen
 
 ## Product systems
 - [ ] CPU strategy and difficulty.
-- [ ] Deck builder, card catalog, rarity metadata, custom ruleset validation.
+- [~] Deck profile/editor domain, catalog search/filtering, rarity/effect statistics, duplicate/banned/enabled-card validation, five named ruleset profiles, and configured Classic/Custom match creation. Durable local storage, Unity UI integration, and complete mode runtimes remain open; see [Customization System](CUSTOMIZATION_SYSTEM.md).
 - [ ] Hot-seat UX, accessibility, settings, tutorials.
 - [ ] LAN host/join, discovery, secure guest admission.
 - [ ] Online identity, accounts, lobby, matchmaking, friends, chat.
