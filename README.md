@@ -6,7 +6,7 @@ A strategy card game for 2–4 total seats, supporting human and CPU players.
 
 Phase 5 — Deck Builder & Custom Ruleset foundation (PR #2; runtime mode completion remains in progress). The shared C# domain includes four CPU difficulty levels, legal-action candidate generation, hidden-information-safe observations, seeded decision-making, turn-order/skip/replay safeguards, deck-exhaustion and maximum-turn termination, and automated match simulations.
 
-See [Customization System](docs/CUSTOMIZATION_SYSTEM.md), [CPU AI](docs/CPU_AI.md), [Stabilization Audit](docs/STABILIZATION_AUDIT.md), [Local Client](docs/LOCAL_CLIENT.md), [Project Status](docs/PROJECT_STATUS.md), the [target rulebook](docs/RULEBOOK.md), and [implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md).
+See [Mode Runtime](docs/MODE_RUNTIME.md), [Customization System](docs/CUSTOMIZATION_SYSTEM.md), [CPU AI](docs/CPU_AI.md), [Stabilization Audit](docs/STABILIZATION_AUDIT.md), [Local Client](docs/LOCAL_CLIENT.md), [Project Status](docs/PROJECT_STATUS.md), the [target rulebook](docs/RULEBOOK.md), and [implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md).
 
 ## Architecture
 
