@@ -182,7 +182,7 @@ public sealed class StabilityRegressionTests
 
         Assert.Equal(MatchStatus.Draw, match.Status);
         Assert.Null(match.WinnerPlayerId);
-        Assert.Single(match.Events.Where(gameEvent => gameEvent.Type == "MatchWon" || gameEvent.Type == "MatchDraw"));
+        Assert.Single(match.Events, gameEvent => gameEvent.Type == "MatchWon" || gameEvent.Type == "MatchDraw");
     }
 
     [Fact]
