@@ -5,6 +5,7 @@ using System.Linq;
 using DrawDecks.Domain;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace DrawDecks.Client.Gameplay
@@ -135,7 +136,7 @@ namespace DrawDecks.Client.Gameplay
         private void EnsureEventSystem()
         {
             if (FindObjectOfType<EventSystem>() != null) return;
-            var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            var eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
             DontDestroyOnLoad(eventSystem);
         }
 
