@@ -50,7 +50,7 @@ public static class MatchReplay
     {
         if (left.Status != right.Status || left.WinnerPlayerId != right.WinnerPlayerId ||
             left.CurrentPlayer.Id != right.CurrentPlayer.Id || left.TurnNumber != right.TurnNumber ||
-            left.DrawPileCount != right.DrawPileCount || left.Events.Count != right.Events.Count)
+            left.DrawPileCount != right.DrawPileCount || left.ActiveSuit != right.ActiveSuit || left.RandomState != right.RandomState || left.Direction != right.Direction || left.DoubleScoreActive != right.DoubleScoreActive || left.BlockedDrawPlayerId != right.BlockedDrawPlayerId || left.SkipPlayerId != right.SkipPlayerId || left.Events.Count != right.Events.Count)
             return false;
         for (var i = 0; i < left.Events.Count; i++)
         {
@@ -66,6 +66,6 @@ public static class MatchReplay
                 !a.Hand.Select(c => c.InstanceId).SequenceEqual(b.Hand.Select(c => c.InstanceId)))
                 return false;
         }
-        return left.DiscardPile.Select(c => c.InstanceId).SequenceEqual(right.DiscardPile.Select(c => c.InstanceId));
+        return left.DiscardPile.Select(c => c.InstanceId).SequenceEqual(right.DiscardPile.Select(c => c.InstanceId)) && left.DrawPile.Select(c => c.InstanceId).SequenceEqual(right.DrawPile.Select(c => c.InstanceId)) && ((left.PendingAttack == null && right.PendingAttack == null) || (left.PendingAttack != null && right.PendingAttack != null && left.PendingAttack.AttackerId == right.PendingAttack.AttackerId && left.PendingAttack.TargetId == right.PendingAttack.TargetId && left.PendingAttack.Effect == right.PendingAttack.Effect));
     }
 }
