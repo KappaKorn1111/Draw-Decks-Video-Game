@@ -48,7 +48,7 @@ public static class MatchReplay
 
     public static bool AreEquivalent(MatchState left, MatchState right)
     {
-        if (left.Status != right.Status || left.WinnerPlayerId != right.WinnerPlayerId ||
+        if (left.MatchId != right.MatchId || left.Seed != right.Seed || left.CatalogVersion != right.CatalogVersion || left.Status != right.Status || left.WinnerPlayerId != right.WinnerPlayerId ||
             left.CurrentPlayer.Id != right.CurrentPlayer.Id || left.TurnNumber != right.TurnNumber ||
             left.DrawPileCount != right.DrawPileCount || left.ActiveSuit != right.ActiveSuit || left.RandomState != right.RandomState || left.Direction != right.Direction || left.DoubleScoreActive != right.DoubleScoreActive || left.BlockedDrawPlayerId != right.BlockedDrawPlayerId || left.SkipPlayerId != right.SkipPlayerId || left.Events.Count != right.Events.Count)
             return false;
