@@ -1276,7 +1276,8 @@ namespace DrawDecks.Client.Gameplay
             bool humanTeamWon = match.WinnerTeamId != null &&
                 match.Players.Any(player => player.Kind == SeatKind.Human && player.TeamId == match.WinnerTeamId);
             if ((winner != null && winner.Kind == SeatKind.Human) || humanTeamWon) wins++;
-            else if (winner != null || match.WinnerTeamId != null) losses++;
+            else if (winner != null || match.WinnerTeamId != null ||
+                (match.Rules.Mode == GameMode.Survival && match.Status == MatchStatus.Completed)) losses++;
             SaveStatistics();
 
             string winnerText = match.WinnerTeamId != null ? match.WinnerTeamId.ToUpperInvariant() + " WINS" :
