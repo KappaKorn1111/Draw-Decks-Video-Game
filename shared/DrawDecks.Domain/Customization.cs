@@ -220,8 +220,8 @@ namespace DrawDecks.Domain
                 errors.Add("Team Battle requires exactly four seats (2v2).");
             if (Mode == GameMode.Elimination && !EliminationEnabled)
                 errors.Add("Elimination mode requires elimination to be enabled.");
-            if (Mode == GameMode.Survival && cpuSeatCount < 1)
-                errors.Add("Survival mode requires at least one CPU opponent.");
+            if (Mode == GameMode.Survival && (cpuSeatCount < 1 || seatCount != cpuSeatCount + 1))
+                errors.Add("Survival requires one human survivor and at least one CPU opponent.");
             if (VictoryCondition == CustomVictoryCondition.Objective && objectives.Length == 0)
                 errors.Add("Objective victory requires at least one objective.");
             if (TurnOrder == TurnOrderPolicy.Randomized && Mode == GameMode.TeamBattle)
@@ -251,7 +251,7 @@ namespace DrawDecks.Domain
                 targetScore: 100, startingHealth: 20, eliminationEnabled: true,
                 victoryCondition: CustomVictoryCondition.LastPlayerStanding),
             new RulesetProfile("team-battle", "Team Battle 2v2", GameMode.TeamBattle,
-                minimumPlayers: 4, maximumPlayers: 4, targetScore: 150,
+                minimumPlayers: 4, maximumPlayers: 4, targetScore: 150, cpuOpponentCount: 2,
                 victoryCondition: CustomVictoryCondition.TeamScore),
             new RulesetProfile("survival", "Survival", GameMode.Survival,
                 minimumPlayers: 2, maximumPlayers: 4, cpuOpponentCount: 3,
