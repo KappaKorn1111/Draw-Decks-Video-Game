@@ -16,13 +16,13 @@ namespace DrawDecks.Domain
         public int Score { get; }
         public int WavesCompleted { get; }
         public ulong Seed { get; }
-        public string RulesetVersion { get; }
+        public string CatalogVersion { get; }
 
         private SurvivalLeaderboardEntry(string matchId, string playerId, int score,
-            int wavesCompleted, ulong seed, string rulesetVersion)
+            int wavesCompleted, ulong seed, string catalogVersion)
         {
             MatchId = matchId; PlayerId = playerId; Score = score;
-            WavesCompleted = wavesCompleted; Seed = seed; RulesetVersion = rulesetVersion;
+            WavesCompleted = wavesCompleted; Seed = seed; CatalogVersion = catalogVersion;
         }
 
         public static SurvivalLeaderboardEntry FromCompletedMatch(MatchState match, string playerId)
