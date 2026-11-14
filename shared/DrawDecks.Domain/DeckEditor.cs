@@ -198,17 +198,19 @@ namespace DrawDecks.Domain
             errors.AddRange(deckValidation.Errors);
             if (deck.CardDefinitionIds.Count < seats.Count * profile.StartingHandSize)
                 errors.Add("Deck does not contain enough cards to deal every starting hand.");
-            foreach (var id in deck.CardDefinitionIds)
+            foreach (var group in deck.CardDefinitionIds.GroupBy(id => id, StringComparer.Ordinal))
             {
-                if (!catalog.TryGet(id, out var definition) || definition == null) continue;
-                if (profile.BannedCardIds.Contains(id, StringComparer.Ordinal))
-                    errors.Add("Deck contains banned card: " + id);
-                if (profile.EnabledCardIds.Count > 0 && !profile.EnabledCardIds.Contains(id, StringComparer.Ordinal))
-                    errors.Add("Deck contains a card not enabled by the ruleset: " + id);
+                if (!catalog.TryGet(group.Key, out var definition) || definition == null) continue;
+                if (group.Count() > Math.Min(profile.DuplicateCardLimit, definition.MaxCopies))
+                    errors.Add("Deck exceeds duplicate card limit: " + group.Key);
+                if (profile.BannedCardIds.Contains(group.Key, StringComparer.Ordinal))
+                    errors.Add("Deck contains banned card: " + group.Key);
+                if (profile.EnabledCardIds.Count > 0 && !profile.EnabledCardIds.Contains(group.Key, StringComparer.Ordinal))
+                    errors.Add("Deck contains a card not enabled by the ruleset: " + group.Key);
                 if (!profile.SpecialCardsEnabled && definition.Kind == CardKind.Special)
-                    errors.Add("Deck contains a special card while special cards are disabled: " + id);
+                    errors.Add("Deck contains a special card while special cards are disabled: " + group.Key);
                 if (profile.RestrictedEffects.Contains(definition.Effect.ToString(), StringComparer.Ordinal))
-                    errors.Add("Deck contains a restricted effect: " + id);
+                    errors.Add("Deck contains a restricted effect: " + group.Key);
             }
             if (errors.Count > 0) return new ConfiguredMatchResult(null, errors.Distinct(StringComparer.Ordinal));
 
