@@ -1,35 +1,40 @@
 # Draw Decks
 
-A cross-platform multiplayer strategy card game for 1–4 total seats (human and CPU).
+Cross-platform multiplayer strategy card game for 2–4 total seats in the default Confluence ruleset (human and CPU combinations supported).
 
-## Project status
-Active development. See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for the implementation checklist, architecture, and current default ruleset.
+## Current milestone
+Phase 1 — Core Game Foundation. See [implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md), [product specification](docs/PRODUCT_SPECIFICATION.md), and [default rulebook](docs/RULEBOOK.md).
 
 ## Architecture
-- **Client:** Unity + C# (Windows, macOS, Linux first; Android/iOS architecture-compatible).
-- **Shared rules:** deterministic C# domain engine.
-- **Backend:** ASP.NET Core Web API, PostgreSQL, Redis, SignalR.
-- **Online matches:** server-authoritative match processes.
-- **Modes:** hot-seat, LAN, and online multiplayer.
+- Unity + C# client; Windows, macOS, Linux first, Android/iOS planned.
+- Shared deterministic C# domain library.
+- ASP.NET Core 10 API foundation.
+- PostgreSQL schema baseline and Redis local infrastructure.
+- Planned authoritative match processes and SignalR real-time transport.
 
-## Repository layout
-- `client/` — Unity project (introduced in client milestone)
-- `server/` — ASP.NET Core services
-- `shared/` — engine-independent C# domain and rules
-- `tests/` — automated test suites
-- `infra/` — Docker and deployment configuration
-- `docs/` — architecture and operations
+## Repository map
+- `client/` — Unity project foundation
+- `shared/DrawDecks.Domain/` — transport-independent rules/domain
+- `server/` — ASP.NET Core solution and API
+- `database/migrations/` — PostgreSQL schema
+- `infra/` — local dependency orchestration
+- `tests/` — automated tests
+- `docs/` — product, architecture, rules, setup, and status
 
-## Build and test the domain engine
+## Quick start
+See [Development Setup](docs/DEVELOPMENT_SETUP.md).
+
 ```bash
-dotnet test tests/DrawDecks.Domain.Tests/DrawDecks.Domain.Tests.csproj
+dotnet restore server/DrawDecks.sln
+dotnet build server/DrawDecks.sln -c Release
+dotnet test tests/DrawDecks.Domain.Tests/DrawDecks.Domain.Tests.csproj -c Release
+docker compose -f infra/docker-compose.yml up -d
 ```
 
-## Prerequisites
-.NET 10 SDK, Unity Editor with required platform modules, Docker Engine/Desktop, and Git.
+The Unity Editor is required to import and build the client. Unity builds are not claimed as verified by the .NET CI workflow.
 
 ## Security
-Never commit credentials, signing keys, production connection strings, or local environment files. Use environment variables or a secrets manager.
+Never commit secrets, signing keys, certificates, or production connection strings. The included Compose password is local-development-only.
 
 ## License
-License selection is pending project-owner approval.
+Pending project-owner decision.
