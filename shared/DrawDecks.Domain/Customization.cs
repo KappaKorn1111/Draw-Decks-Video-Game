@@ -236,7 +236,8 @@ namespace DrawDecks.Domain
         public Ruleset ToEngineRuleset()
         {
             return new Ruleset(StartingHandSize, MaximumHandSize, MaximumPlayers,
-                false, TargetScore, MaximumRounds > 0 ? MaximumRounds : 500);
+                false, TargetScore, MaximumRounds > 0 ? MaximumRounds : 500,
+                Mode, StartingHealth, 5, Mode == GameMode.Survival ? MaximumRounds : 0, 10);
         }
     }
 
