@@ -1,6 +1,8 @@
+#nullable enable
 using System;
 
-namespace DrawDecks.Domain;
+namespace DrawDecks.Domain
+{
 
 /// <summary>Specified seeded PRNG for reproducible gameplay; never use for security tokens.</summary>
 internal sealed class DeterministicRandom
@@ -21,4 +23,5 @@ internal sealed class DeterministicRandom
         if (exclusiveMax <= 0) throw new ArgumentOutOfRangeException(nameof(exclusiveMax));
         ulong bound=(ulong)exclusiveMax;ulong threshold=unchecked(0UL-bound)%bound;while(true){ulong value=NextUInt64();if(value>=threshold)return (int)(value%bound);}
     }
+}
 }
