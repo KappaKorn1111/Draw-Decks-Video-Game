@@ -203,6 +203,8 @@ namespace DrawDecks.Domain
                 errors.Add("Seat count is outside the ruleset player bounds.");
             if (cpuSeatCount < 0 || cpuSeatCount > seatCount - 1)
                 errors.Add("CPU seat count is invalid; at least one human seat is required.");
+            if (cpuSeatCount != CpuOpponentCount)
+                errors.Add("CPU seat count does not match the configured CPU opponent count.");
             if (CpuOpponentCount < 0 || CpuOpponentCount > MaximumPlayers - 1)
                 errors.Add("Configured CPU opponent count is invalid.");
             if (DeckMinimumSize < 1 || DeckMaximumSize < DeckMinimumSize || DeckMaximumSize > 108)
@@ -226,9 +228,6 @@ namespace DrawDecks.Domain
                 if (!catalog.TryGet(id, out _)) errors.Add("Unknown card definition: " + id);
             var overlap = enabledCardIds.Intersect(bannedCardIds, StringComparer.Ordinal).ToArray();
             if (overlap.Length > 0) errors.Add("A card cannot be both enabled and banned: " + string.Join(", ", overlap));
-            foreach (var id in bannedCardIds)
-                if (catalog.TryGet(id, out var card) && card != null && card.IsAvailable == false)
-                    continue;
             return errors.AsReadOnly();
         }
 
