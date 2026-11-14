@@ -57,5 +57,5 @@ Run: https://github.com/KappaKorn1111/Draw-Decks-Video-Game/actions/runs/4356306
 ## Acceptance state
 
 **Prompt 04 implementation:** BUILT — shared AI engine, Unity integration, difficulty/performance controls, and tests are committed.  
-**CI status:** PASS — 32/32 tests on commit 815ba24ebbf8f1ddb3f7719ffed03e6e61218acd.  
+**CI status:** PASS — 33/33 tests on commit c4da17ea1574782dec04cfbd81b6d0d24846e747.  
 **Unity verification:** Pending. Unity Editor import and Play Mode CPU-turn walkthroughs must still be completed before full Unity runtime acceptance.
