@@ -495,7 +495,7 @@ namespace DrawDecks.Client.Gameplay
                 14, TextMuted, TextAnchor.MiddleCenter, 34f);
 
             CreateText(pageBody, "Rulesets: Classic (100 points), Quick Match (50), Marathon (150). " +
-                "Deck presets: Confluence Standard (52 standard + 13 effect cards) or Classic 52. " +
+                "Deck presets: Confluence Standard (52 standard + 14 effect definitions) or Classic 52. " +
                 "Effect stacking is disabled in this ruleset.", 14, TextMuted, TextAnchor.MiddleCenter, 44f);
             CreateButton(pageBody, "START MATCH", StartMatchFromSetup, 66f, background: AccentDim);
             CreateButton(pageBody, "BACK TO MAIN MENU", ShowMainMenu, 52f);
@@ -1321,7 +1321,7 @@ namespace DrawDecks.Client.Gameplay
         {
             BeginPage("Deck Builder", "Select a supported deck preset for your next local match.");
             CreateText(pageBody, "CONFLUENCE STANDARD", 22, Gold, TextAnchor.MiddleCenter, 44f, style: FontStyle.Bold);
-            CreateText(pageBody, "65 cards · 52 standard cards plus 13 action, attack, defense, and special cards. " +
+            CreateText(pageBody, "66 definitions · 52 standard cards plus 14 action, attack, defense, and special definitions. " +
                 "Each catalog definition is limited to its configured copy count.", 17, TextPrimary, TextAnchor.MiddleCenter, 92f);
             CreateButton(pageBody, "USE CONFLUENCE STANDARD", () =>
             {
