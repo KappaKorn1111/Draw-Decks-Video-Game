@@ -47,6 +47,7 @@ namespace DrawDecks.Client.Gameplay
 
         private int playerCount = 2;
         private int rulesetIndex;
+        private int gameModeIndex;
         private int deckIndex;
         private int timerIndex;
         private string setupMode = "Local Multiplayer";
@@ -64,6 +65,7 @@ namespace DrawDecks.Client.Gameplay
         private int cpuBudgetIndex = 1;
         private Text playerCountLabel;
         private Text rulesetLabel;
+        private Text gameModeLabel;
         private Text deckLabel;
         private Text timerChoiceLabel;
         private Text cpuDelayLabel;
@@ -454,6 +456,8 @@ namespace DrawDecks.Client.Gameplay
                 .GetComponentInChildren<Text>();
             timerChoiceLabel = CreateButton(settingsRow, TimerDisplay(), CycleTimer, 58f)
                 .GetComponentInChildren<Text>();
+            gameModeLabel = CreateButton(pageBody, GameModeDisplay(), CycleGameMode, 54f, background: AccentDim)
+                .GetComponentInChildren<Text>();
 
             CreateText(pageBody, "PLAYER SEATS  ·  Tap HUMAN / CPU to change each seat", 17, Gold,
                 TextAnchor.MiddleLeft, 32f, style: FontStyle.Bold);
@@ -498,6 +502,37 @@ namespace DrawDecks.Client.Gameplay
             if (playerCountLabel != null) playerCountLabel.text = "Players: " + playerCount;
             for (int i = 0; i < setupSeatRows.Length; i++)
                 if (setupSeatRows[i] != null) setupSeatRows[i].gameObject.SetActive(i < playerCount);
+        }
+
+        private string GameModeDisplay()
+        {
+            return "MODE: " + ((GameMode)gameModeIndex).ToString().ToUpperInvariant() + "  ·  TAP TO CHANGE";
+        }
+
+        private void CycleGameMode()
+        {
+            gameModeIndex = (gameModeIndex + 1) % 5;
+            var mode = (GameMode)gameModeIndex;
+            if (mode == GameMode.TeamBattle)
+            {
+                playerCount = 4;
+                slotKinds[0] = SeatKind.Human; slotKinds[1] = SeatKind.Cpu;
+                slotKinds[2] = SeatKind.Human; slotKinds[3] = SeatKind.Cpu;
+            }
+            else if (mode == GameMode.Survival)
+            {
+                playerCount = 4;
+                slotKinds[0] = SeatKind.Human;
+                for (int i = 1; i < 4; i++) slotKinds[i] = SeatKind.Cpu;
+            }
+            else if (mode == GameMode.Elimination)
+            {
+                playerCount = Mathf.Clamp(playerCount, 2, 4);
+                slotKinds[0] = SeatKind.Human;
+                for (int i = 1; i < playerCount; i++) slotKinds[i] = SeatKind.Cpu;
+            }
+            if (gameModeLabel != null) gameModeLabel.text = GameModeDisplay();
+            ShowMatchSetup(false);
         }
 
         private string RulesetDisplay()
@@ -586,8 +621,11 @@ namespace DrawDecks.Client.Gameplay
         private Ruleset BuildSelectedRules()
         {
             int target = rulesetIndex == 1 ? 50 : rulesetIndex == 2 ? 150 : 100;
-            return new Ruleset(startingHandSize: 5, maximumHandSize: 7, maximumPlayers: playerCount,
-                allowStacking: false, targetScore: target);
+            GameMode mode = (GameMode)gameModeIndex;
+            int maximumPlayers = mode == GameMode.TeamBattle ? 4 : playerCount;
+            return new Ruleset(startingHandSize: 5, maximumHandSize: 7, maximumPlayers: maximumPlayers,
+                allowStacking: false, targetScore: target, mode: mode, startingHealth: 20,
+                damagePerHit: 5, survivalMaximumWaves: 0, survivalScorePerCpu: 10);
         }
 
         private string[] BuildDeckIds()
@@ -615,6 +653,17 @@ namespace DrawDecks.Client.Gameplay
             if (playerCount < 2 || playerCount > MaxSeats)
             {
                 ShowNoticePage("A local match requires 2–4 total seats.");
+                return;
+            }
+            if ((GameMode)gameModeIndex == GameMode.TeamBattle && playerCount != 4)
+            {
+                ShowNoticePage("Team Battle requires exactly four seats. Select four players.");
+                return;
+            }
+            if ((GameMode)gameModeIndex == GameMode.Survival &&
+                (slotKinds[0] != SeatKind.Human || slotKinds.Skip(1).Take(playerCount - 1).Any(kind => kind != SeatKind.Cpu)))
+            {
+                ShowNoticePage("Survival requires one human survivor in seat 1 and CPU opponents in all other seats.");
                 return;
             }
 
@@ -871,7 +920,7 @@ namespace DrawDecks.Client.Gameplay
         private static bool NeedsTarget(CardEffect effect)
         {
             return effect == CardEffect.StealCard || effect == CardEffect.DiscardRandomCard ||
-                   effect == CardEffect.BlockDraw || effect == CardEffect.SkipTurn ||
+                   effect == CardEffect.BlockDraw || effect == CardEffect.Damage || effect == CardEffect.SkipTurn ||
                    effect == CardEffect.SwapHands;
         }
 
@@ -884,7 +933,8 @@ namespace DrawDecks.Client.Gameplay
         private string GetSelectedTargetId()
         {
             if (match == null) return null;
-            var available = match.Players.Where(p => p.Id != match.CurrentPlayer.Id && !p.IsEliminated).ToList();
+            var available = match.Players.Where(p => p.Id != match.CurrentPlayer.Id && !p.IsEliminated &&
+                (match.Rules.Mode != GameMode.TeamBattle || p.TeamId != match.CurrentPlayer.TeamId)).ToList();
             if (available.Count == 0) return null;
             if (!string.IsNullOrEmpty(selectedTargetId) && available.Any(p => p.Id == selectedTargetId))
                 return selectedTargetId;
@@ -894,7 +944,8 @@ namespace DrawDecks.Client.Gameplay
 
         private void CycleTarget()
         {
-            var available = match.Players.Where(p => p.Id != match.CurrentPlayer.Id && !p.IsEliminated).ToList();
+            var available = match.Players.Where(p => p.Id != match.CurrentPlayer.Id && !p.IsEliminated &&
+                (match.Rules.Mode != GameMode.TeamBattle || p.TeamId != match.CurrentPlayer.TeamId)).ToList();
             if (available.Count == 0) return;
             int index = available.FindIndex(p => p.Id == selectedTargetId);
             selectedTargetId = available[(index + 1) % available.Count].Id;
@@ -1138,11 +1189,14 @@ namespace DrawDecks.Client.Gameplay
         private string NextLivingSeatId(string playerId)
         {
             int index = match.Players.ToList().FindIndex(p => p.Id == playerId);
+            var actor = match.Players[index];
             for (int step = 1; step <= match.Players.Count; step++)
             {
                 int candidate = (index + (match.TurnDirection * step) + match.Players.Count * 2) % match.Players.Count;
-                if (!match.Players[candidate].IsEliminated && match.Players[candidate].Id != playerId)
-                    return match.Players[candidate].Id;
+                var target = match.Players[candidate];
+                if (!target.IsEliminated && target.Id != playerId &&
+                    (match.Rules.Mode != GameMode.TeamBattle || target.TeamId != actor.TeamId))
+                    return target.Id;
             }
             return null;
         }
