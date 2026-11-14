@@ -17,4 +17,4 @@ app.MapGet("/api/v1", () => Results.Ok(new
 }));
 app.Run();
 
-public partial class Program;
+public partial class Program { }
