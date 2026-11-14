@@ -48,11 +48,19 @@ public static class MatchReplay
         return replay;
     }
 
+    private static bool NonScoringCountsEqual(MatchState left, MatchState right)
+    {
+        if (left.ConsecutiveNonScoringTurns.Count != right.ConsecutiveNonScoringTurns.Count)
+            return false;
+        return left.ConsecutiveNonScoringTurns.All(pair =>
+            right.ConsecutiveNonScoringTurns.TryGetValue(pair.Key, out var count) && count == pair.Value);
+    }
+
     public static bool AreEquivalent(MatchState left, MatchState right)
     {
         if (left.MatchId != right.MatchId || left.Seed != right.Seed || left.CatalogVersion != right.CatalogVersion || left.Status != right.Status || left.WinnerPlayerId != right.WinnerPlayerId ||
             left.CurrentPlayer.Id != right.CurrentPlayer.Id || left.TurnNumber != right.TurnNumber ||
-            left.DrawPileCount != right.DrawPileCount || left.ActiveSuit != right.ActiveSuit || left.RandomState != right.RandomState || left.Direction != right.Direction || left.DoubleScoreActive != right.DoubleScoreActive || left.BlockedDrawPlayerId != right.BlockedDrawPlayerId || !left.PendingSkipPlayerIds.SetEquals(right.PendingSkipPlayerIds) || left.Events.Count != right.Events.Count)
+            left.DrawPileCount != right.DrawPileCount || left.ActiveSuit != right.ActiveSuit || left.RandomState != right.RandomState || left.Direction != right.Direction || left.DoubleScoreActive != right.DoubleScoreActive || left.BlockedDrawPlayerId != right.BlockedDrawPlayerId || !left.PendingSkipPlayerIds.SetEquals(right.PendingSkipPlayerIds) || left.Events.Count != right.Events.Count || left.TurnHadScoringAction != right.TurnHadScoringAction || !NonScoringCountsEqual(left,right))
             return false;
         for (var i = 0; i < left.Events.Count; i++)
         {

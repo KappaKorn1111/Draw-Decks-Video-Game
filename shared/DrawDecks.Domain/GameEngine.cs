@@ -30,6 +30,7 @@ public static partial class GameEngine {
   var card=p.MutableHand.First(x=>x.InstanceId==cardId);
   var target=targetPlayerId==null?null:state.MutablePlayers.First(x=>x.Id==targetPlayerId&&!x.IsEliminated);
   state.Emit("CommandAccepted",playerId,card.InstanceId,targetPlayerId,"PlayCard|"+chosenSuit);
+  if(card.Definition.Effect==CardEffect.None)state.TurnHadScoringAction=true;
   p.MutableHand.Remove(card);
   state.MutableDiscardPile.Add(card);
   state.Emit("CardPlayed",playerId,card.InstanceId,targetPlayerId,card.Definition.Effect.ToString());
@@ -97,6 +98,24 @@ public static partial class GameEngine {
  private static void Advance(MatchState s)
  {
   if(s.Status!=MatchStatus.Active)return;
+
+  var completingPlayer=s.CurrentPlayer;
+  int previousStreak=s.ConsecutiveNonScoringTurns.TryGetValue(completingPlayer.Id,out var value)?value:0;
+  s.ConsecutiveNonScoringTurns[completingPlayer.Id]=s.TurnHadScoringAction?0:previousStreak+1;
+  s.TurnHadScoringAction=false;
+
+  if(s.DrawPile.Count==0)
+  {
+   var living=s.MutablePlayers.Where(player=>!player.IsEliminated).ToArray();
+   if(living.Length>0&&living.All(player=>
+      s.ConsecutiveNonScoringTurns.TryGetValue(player.Id,out var count)&&count>=2))
+   {
+    CheckVictory(s);
+    if(s.Status==MatchStatus.Active)ResolveSuddenScore(s);
+    if(s.Status!=MatchStatus.Active)return;
+   }
+  }
+
   int seatCount=s.MutablePlayers.Count;
   int livingCount=s.MutablePlayers.Count(player=>!player.IsEliminated);
   int origin=s.CurrentPlayerIndex;
@@ -125,6 +144,34 @@ public static partial class GameEngine {
   s.CurrentPlayerIndex=index;
   s.TurnNumber++;
   s.Emit("TurnStarted",s.CurrentPlayer.Id,data:"turn="+s.TurnNumber);
+ }
+
+ private static void ResolveSuddenScore(MatchState s)
+ {
+  var leaders=s.MutablePlayers
+   .Where(player=>!player.IsEliminated)
+   .OrderByDescending(player=>player.Score)
+   .ThenByDescending(player=>player.Hand.Count)
+   .ToArray();
+
+  s.Emit("SuddenScoreStarted","system",data:"deck-exhausted-and-stalled");
+  if(leaders.Length==0)
+  {
+   s.Status=MatchStatus.Draw;
+   s.Emit("MatchDraw","system",data:"sudden-score-no-living-players");
+   return;
+  }
+
+  if(leaders.Length>1&&leaders[0].Score==leaders[1].Score&&leaders[0].Hand.Count==leaders[1].Hand.Count)
+  {
+   s.Status=MatchStatus.Draw;
+   s.Emit("MatchDraw","system",data:"sudden-score-tie");
+   return;
+  }
+
+  s.Status=MatchStatus.Completed;
+  s.WinnerPlayerId=leaders[0].Id;
+  s.Emit("MatchWon",leaders[0].Id,data:"sudden-score");
  }
  private static void CheckVictory(MatchState s){var alive=s.MutablePlayers.Where(p=>!p.IsEliminated).ToArray();if(alive.Length==1){s.Status=MatchStatus.Completed;s.WinnerPlayerId=alive[0].Id;s.Emit("MatchWon",alive[0].Id);}else if(alive.Length==0){s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system");}else{var leaders=alive.Where(p=>p.Score>=s.Rules.TargetScore).OrderByDescending(p=>p.Score).ToArray();if(leaders.Length>0){s.Status=MatchStatus.Completed;if(leaders.Length>1&&leaders[0].Score==leaders[1].Score){s.Status=MatchStatus.Draw;s.Emit("MatchDraw","system",data:"score-tie");}else{s.WinnerPlayerId=leaders[0].Id;s.Emit("MatchWon",leaders[0].Id,data:"target-score");}}}}
  private static ActionError ValidateTurn(MatchState s,string id){if(s==null)throw new ArgumentNullException(nameof(s));if(s.Status!=MatchStatus.Active)return ActionError.MatchNotActive;if(s.PendingAttack!=null)return ActionError.InvalidPhase;if(s.CurrentPlayer.Id!=id)return s.MutablePlayers.Any(p=>p.Id==id)?ActionError.NotPlayersTurn:ActionError.InvalidPlayer;return ActionError.None;}
