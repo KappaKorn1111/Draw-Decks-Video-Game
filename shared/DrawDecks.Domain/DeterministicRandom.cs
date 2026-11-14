@@ -19,6 +19,6 @@ internal sealed class DeterministicRandom
     public int Next(int exclusiveMax)
     {
         if (exclusiveMax <= 0) throw new ArgumentOutOfRangeException(nameof(exclusiveMax));
-        return (int)(NextUInt64() % (uint)exclusiveMax);
+        ulong bound=(ulong)exclusiveMax;ulong threshold=unchecked(0UL-bound)%bound;while(true){ulong value=NextUInt64();if(value>=threshold)return (int)(value%bound);}
     }
 }
