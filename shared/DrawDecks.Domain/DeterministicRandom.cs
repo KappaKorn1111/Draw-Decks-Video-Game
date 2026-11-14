@@ -1,3 +1,5 @@
+using System;
+
 namespace DrawDecks.Domain;
 
 /// <summary>Specified seeded PRNG for reproducible gameplay; never use for security tokens.</summary>
