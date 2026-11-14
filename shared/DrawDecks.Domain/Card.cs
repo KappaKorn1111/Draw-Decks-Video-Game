@@ -5,7 +5,7 @@ namespace DrawDecks.Domain
 public enum Suit { None=-1, Clubs=0, Diamonds=1, Hearts=2, Spades=3 }
 public enum CardRarity { Common, Uncommon, Rare, Epic, Legendary }
 public enum CardKind { Standard, Action, Attack, Defense, Special }
-public enum CardEffect { None, DrawTwo, SkipTurn, ReverseOrder, SwapHands, StealCard, DiscardRandomCard, BlockDraw, Shield, Reflect, Negate, Wild, DeckReset, DoubleScore }
+public enum CardEffect { None, DrawTwo, SkipTurn, ReverseOrder, SwapHands, StealCard, DiscardRandomCard, BlockDraw, Damage, Shield, Reflect, Negate, Wild, DeckReset, DoubleScore }
 public sealed class CardDefinition {
  public string Id {get;} public string Name {get;} public CardKind Kind {get;} public CardEffect Effect {get;} public Suit Suit {get;} public int Rank {get;} public int Value {get;} public CardRarity Rarity {get;} public int MaxCopies {get;} public bool IsAvailable {get;}
  public CardDefinition(string id,string name,CardKind kind,CardEffect effect=CardEffect.None,Suit suit=Suit.None,int rank=0,int value=0,CardRarity rarity=CardRarity.Common,int maxCopies=1,bool isAvailable=true) {
