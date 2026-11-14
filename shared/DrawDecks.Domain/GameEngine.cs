@@ -109,7 +109,7 @@ public static partial class GameEngine {
    s.ConsecutiveNonScoringTurns.TryGetValue(player.Id,out var count)&&count>=2);
   bool turnLimitReached=s.TurnNumber>=s.Rules.MaximumTurns;
 
-  if(deckExhaustedAndStalled||turnLimitReached)
+  if(s.Rules.Mode!=GameMode.Survival&&(deckExhaustedAndStalled||turnLimitReached))
   {
    CheckVictory(s);
    if(s.Status==MatchStatus.Active)
