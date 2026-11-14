@@ -175,7 +175,7 @@ public sealed class CpuAiTests
                     commands++;
                 }
 
-                Assert.NotEqual(MatchStatus.Active, match.Status,
+                Assert.True(match.Status != MatchStatus.Active,
                     "Match failed to complete. Difficulty=" + difficulty + ", players=" + playerCount);
                 Assert.InRange(commands, 1, 2500);
                 if (match.Status == MatchStatus.Completed)
