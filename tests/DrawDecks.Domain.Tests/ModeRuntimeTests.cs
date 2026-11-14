@@ -86,6 +86,8 @@ public sealed class ModeRuntimeTests
         Assert.True(match.TeamScores["team-a"] >= scoringCard.Definition.Value);
         Assert.Equal("team-a", match.WinnerTeamId);
         Assert.Equal(MatchStatus.Completed, match.Status);
+        var replay = MatchReplay.Replay(match, catalog);
+        Assert.True(MatchReplay.AreEquivalent(match, replay));
     }
 
     [Fact]
@@ -132,6 +134,8 @@ public sealed class ModeRuntimeTests
         Assert.Equal("human", match.WinnerPlayerId);
         Assert.Contains(match.Events, item => item.Type == "SurvivalWaveCleared");
         Assert.Contains(match.Events, item => item.Type == "SurvivalCompleted");
+        var replay = MatchReplay.Replay(match, Catalog());
+        Assert.True(MatchReplay.AreEquivalent(match, replay));
     }
 
     [Fact]
