@@ -636,7 +636,12 @@ namespace DrawDecks.Client.Gameplay
             IEnumerable<CardDefinition> definitions = catalog.Definitions;
             if (deckIndex % 2 == 1)
                 definitions = definitions.Where(d => d.Kind == CardKind.Standard);
-            return definitions.Select(d => d.Id).ToArray();
+            var ids = definitions.Select(d => d.Id).Where(id => id != "attack-damage").ToList();
+            if ((GameMode)gameModeIndex == GameMode.Elimination ||
+                (GameMode)gameModeIndex == GameMode.TeamBattle ||
+                (GameMode)gameModeIndex == GameMode.Survival)
+                for (int copy = 0; copy < 4; copy++) ids.Add("attack-damage");
+            return ids.ToArray();
         }
 
         private void StartMatchFromSetup()
@@ -1068,7 +1073,10 @@ namespace DrawDecks.Client.Gameplay
 
         private float CpuThinkingDelaySeconds()
         {
-            return new[] { 0.15f, 0.65f, 1.15f }[cpuDelayIndex % 3];
+            float delay = new[] { 0.15f, 0.65f, 1.15f }[cpuDelayIndex % 3];
+            if (match != null && match.Rules.Mode == GameMode.Survival)
+                delay = Mathf.Max(0.08f, delay - (match.SurvivalWave - 1) * 0.04f);
+            return delay;
         }
 
         private CpuAiOptions BuildCpuAiOptions(string playerId, bool hasDrawn)
@@ -1076,6 +1084,9 @@ namespace DrawDecks.Client.Gameplay
             CpuDifficulty difficulty = cpuDifficulties.TryGetValue(playerId, out var value)
                 ? value
                 : CpuDifficulty.Normal;
+            if (match != null && match.Rules.Mode == GameMode.Survival)
+                difficulty = (CpuDifficulty)Mathf.Min((int)CpuDifficulty.Expert,
+                    (int)difficulty + Mathf.Max(0, (match.SurvivalWave - 1) / 2));
             int[] budgets = { 48, 96, 192 };
             int[] depths = { 1, 2, 4 };
             return new CpuAiOptions(
