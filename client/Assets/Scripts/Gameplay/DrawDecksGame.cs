@@ -78,6 +78,7 @@ namespace DrawDecks.Client.Gameplay
         private int wins;
         private int losses;
         private int matchesPlayed;
+        private int survivalBestScore;
 
         private static readonly Color Background = new Color(0.035f, 0.055f, 0.085f, 1f);
         private static readonly Color Panel = new Color(0.075f, 0.105f, 0.15f, 1f);
@@ -501,7 +502,10 @@ namespace DrawDecks.Client.Gameplay
 
         private void CyclePlayerCount()
         {
-            playerCount = playerCount >= 4 ? 2 : playerCount + 1;
+            if ((GameMode)gameModeIndex == GameMode.TeamBattle)
+                playerCount = 4;
+            else
+                playerCount = playerCount >= 4 ? 2 : playerCount + 1;
             if (playerCountLabel != null) playerCountLabel.text = "Players: " + playerCount;
             for (int i = 0; i < setupSeatRows.Length; i++)
                 if (setupSeatRows[i] != null) setupSeatRows[i].gameObject.SetActive(i < playerCount);
@@ -1259,6 +1263,15 @@ namespace DrawDecks.Client.Gameplay
             if (resultsRecorded) return;
             resultsRecorded = true;
             matchesPlayed++;
+            if (match.Rules.Mode == GameMode.Survival)
+            {
+                var survivor = match.Players.FirstOrDefault(player => player.Kind == SeatKind.Human);
+                if (survivor != null)
+                {
+                    var leaderboardEntry = SurvivalLeaderboardEntry.FromCompletedMatch(match, survivor.Id);
+                    survivalBestScore = Mathf.Max(survivalBestScore, leaderboardEntry.Score);
+                }
+            }
             var winner = match.WinnerPlayerId == null ? null : match.Players.FirstOrDefault(p => p.Id == match.WinnerPlayerId);
             bool humanTeamWon = match.WinnerTeamId != null &&
                 match.Players.Any(player => player.Kind == SeatKind.Human && player.TeamId == match.WinnerTeamId);
@@ -1276,7 +1289,8 @@ namespace DrawDecks.Client.Gameplay
                 32, Gold, TextAnchor.MiddleCenter, 78f, style: FontStyle.Bold);
             if (match.Rules.Mode == GameMode.Survival)
                 CreateText(pageBody, "WAVES CLEARED  ·  " + match.SurvivalWave +
-                    "     ·     SURVIVAL SCORE  ·  " + match.SurvivalScore,
+                    "     ·     SURVIVAL SCORE  ·  " + match.SurvivalScore +
+                    "     ·     PERSONAL BEST  ·  " + survivalBestScore,
                     20, Accent, TextAnchor.MiddleCenter, 48f);
             if (match.Rules.Mode == GameMode.TeamBattle)
                 CreateText(pageBody, "TEAM SCORES  ·  " + string.Join("     |     ",
@@ -1340,6 +1354,7 @@ namespace DrawDecks.Client.Gameplay
             CreateText(pageBody, "MATCHES PLAYED  ·  " + matchesPlayed, 24, Gold, TextAnchor.MiddleCenter, 58f);
             CreateText(pageBody, "HUMAN WINS  ·  " + wins, 22, TextPrimary, TextAnchor.MiddleCenter, 52f);
             CreateText(pageBody, "HUMAN LOSSES  ·  " + losses, 22, TextPrimary, TextAnchor.MiddleCenter, 52f);
+            CreateText(pageBody, "SURVIVAL BEST  ·  " + survivalBestScore, 22, Gold, TextAnchor.MiddleCenter, 52f);
             CreateText(pageBody, "WIN RATE  ·  " + (matchesPlayed == 0 ? "—" :
                 (100f * wins / matchesPlayed).ToString("0.0") + "%"), 22, Accent, TextAnchor.MiddleCenter, 52f);
             CreateButton(pageBody, "BACK", ShowMainMenu, 52f);
@@ -1392,6 +1407,7 @@ namespace DrawDecks.Client.Gameplay
             matchesPlayed = PlayerPrefs.GetInt("DrawDecks.Matches", 0);
             wins = PlayerPrefs.GetInt("DrawDecks.Wins", 0);
             losses = PlayerPrefs.GetInt("DrawDecks.Losses", 0);
+            survivalBestScore = PlayerPrefs.GetInt("DrawDecks.SurvivalBest", 0);
         }
 
         private void SaveStatistics()
@@ -1399,6 +1415,7 @@ namespace DrawDecks.Client.Gameplay
             PlayerPrefs.SetInt("DrawDecks.Matches", matchesPlayed);
             PlayerPrefs.SetInt("DrawDecks.Wins", wins);
             PlayerPrefs.SetInt("DrawDecks.Losses", losses);
+            PlayerPrefs.SetInt("DrawDecks.SurvivalBest", survivalBestScore);
             PlayerPrefs.Save();
         }
     }
