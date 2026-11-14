@@ -11,15 +11,14 @@
 - Deck validation, deterministic seeded shuffle, deal, draw, hand limits, play, discard, reverse direction, skip scheduling, and suit selection.
 - Domain resolution for Draw 2, Swap Hands, Steal, Random Discard, Block Draw, Shield, Reflect, Negate, Wild, Deck Reset, and Double Score.
 - Typed command failures, elimination/target-score victory, sequenced transition events, accepted-command records, and deterministic replay/equivalence checks.
-- Phase 2 CI acceptance on commit 440df2c8e91c45caf96e04b41a55cef123830219: Release build succeeded and all 26 domain tests passed.
 
 ## Phase 3 — Playable local Unity client
 
 - Runtime-generated main menu with Play, Solo Practice, Local Multiplayer, Online Multiplayer, Deck Builder, Collection, Statistics, Settings, Support, and Exit.
 - Match setup for 2–4 seats, player names, Human/CPU selection, Classic/Quick/Marathon score targets, Confluence/Classic deck presets, and turn timer selection.
-- Unity consumes the shared domain source through a local UPM package; no forked rules-engine copy is maintained.
-- Local CPU opponent policy, human card selection, draw/play/pass, target/suit selection, attack responses, and defense cards.
-- Hot-seat privacy screen between human seats, turn timer, scoreboard, deck/discard counts, match notifications/history, pause, rematch, results, and local statistics.
+- Unity consumes the shared domain source through a local UPM package; domain source uses C# 9-compatible syntax for Unity 6.3.
+- Input System UI event module, local CPU opponent policy, human card selection, draw/play/pass, target/suit selection, attack responses, and defense cards.
+- Hot-seat privacy screen between human seats, turn timer, scoreboard, opponent hand counts, deck/discard counts, card entrance animation, match notifications/history, pause, rematch, results, and local statistics.
 - Editor bootstrap creates a Main scene and registers it in Build Settings.
 - Automated .NET seat-composition acceptance test covers 1 human vs 1–3 CPUs, 2 humans vs 2 CPUs, 3 humans vs 1 CPU, and 4 humans.
 
@@ -34,5 +33,5 @@
 
 ## Acceptance state
 
-**Implementation status:** BUILT — pending automated CI on the new commit and Unity Editor validation.  
-**Do not treat Prompt 03 as fully accepted until the new CI run passes and the project is imported and played in Unity.**
+**Implementation status:** BUILT — CI and Unity Editor validation must both be green before Prompt 03 is considered accepted.  
+**Unity verification:** Not yet executed in this environment.  
